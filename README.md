@@ -1,6 +1,9 @@
 DaVinci Resolve Python API stubs
 ================================
 
+Using these stubs you can have type hints and autocompletion in your Python IDE
+when using DaVinci Resolve Python API. No more stumbling in the dark, yay!
+
 Installation
 ------------
 
@@ -38,9 +41,9 @@ Patches are welcome to fix any errors in the stubs!
 About versioning
 ----------------
 
-The stubs package major and minor version numbers (eg. 18.1) indicate compatibility 
+The stubs package major and minor version numbers (eg. 18.5) indicate compatibility 
 with the corresponding DaVinci Resolve version and is based on the documentaton 
 (scripting README.txt) shipped with that version. The patch version number is incremental
 and does not correspond to DaVinci Resolve releases.
 
-The current stubs are based on the documentation marked as "Updated as of 22 Nov 2022". 
+The current stubs are based on the documentation marked as "Updated as of 26 May 2023". 

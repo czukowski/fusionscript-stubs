@@ -16,6 +16,9 @@ GalleryStillExportFormat = Literal['dpx', 'cin', 'tif', 'jpg', 'png', 'ppm', 'bm
 GradeMode = Literal[0, 1, 2]
 """ 0 - "No keyframes", 1 - "Source Timecode aligned", 2 - "Start Frames aligned" """
 
+MagicMaskMode = Literal['F', 'B', 'BI']
+""" 'F' - forward, 'B' - backward, 'BI' - bidirection """
+
 MediaType = Literal[1, 2]
 """ 1 - Video only, 2 - Audio only """
 
@@ -28,6 +31,8 @@ StereoEye = Literal['left', 'right']
 
 StillFrameSource = Literal[1, 2]
 """ 1 - First frame, 2 - Middle frame """
+
+SubTrackType = Literal['mono', 'stereo', '5.1', '5.1film', '7.1', '7.1film'] + ['adaptive{number}'.format(number) for number in range(1, 24)]
 
 TimelineExportType = Literal[
     Resolve.EXPORT_AAF,
@@ -44,6 +49,7 @@ TimelineExportType = Literal[
     Resolve.EXPORT_DOLBY_VISION_VER_2_9,
     Resolve.EXPORT_DOLBY_VISION_VER_4_0,
     Resolve.EXPORT_DOLBY_VISION_VER_5_1,
+    Resolve.EXPORT_OTIO,
 ]
 
 TimelineExportSubtype = Literal[
@@ -113,11 +119,21 @@ class MediaPoolClipInfo(TypedDict):
      - 'startFrame' (int)
      - 'endFrame' (int)
      - (optional) 'mediaType' (int; 1 - Video only, 2 - Audio only)
+     - 'trackIndex' (int)
+     - 'recordFrame' (int)
     """
     mediaPoolItem: MediaPoolItem
     startFrame: int
     endFrame: int
     mediaType: NotRequired[MediaType]
+    trackIndex: int
+    recordFrame: int
+
+
+class MediaPoolItemInfo(TypedDict):
+    media: str
+    startFrame: int
+    endFrame: int
 
 
 class Preset(TypedDict):
@@ -218,10 +234,10 @@ class TimelineClipInfo(TypedDict):
 class TimelineImportOptions(TypedDict):
     """
     Keys:
-     - 'timelineName': string, specifies the name of the timeline to be created
-     - 'importSourceClips': bool, specifies whether source clips should be imported, True by default
+     - 'timelineName': string, specifies the name of the timeline to be created. Not valid for DRT import
+     - 'importSourceClips': bool, specifies whether source clips should be imported, True by default. Not valid for DRT import
      - 'sourceClipsPath': string, specifies a filesystem path to search for source clips if the media is inaccessible in their original path and if "importSourceClips" is True
-     - 'sourceClipsFolders': List of Media Pool folder objects to search for source clips if the media is not present in current folder and if "importSourceClips" is False
+     - 'sourceClipsFolders': List of Media Pool folder objects to search for source clips if the media is not present in current folder and if "importSourceClips" is False. Not valid for DRT import
      - 'interlaceProcessing': Bool, specifies whether to enable interlace processing on the imported timeline being created. valid only for AAF import
     """
     timelineName: str
@@ -358,9 +374,11 @@ class Resolve:
     ensure the success of the operation. You can troubleshoot the validity of keys and values by setting the desired result from the UI and checking property snapshots before and after the change.
 
     The following Project properties have specifically enumerated values:
-    "superScale" - the property value is an enumerated integer between 0 and 3 with these meanings: 0=Auto, 1=no scaling, and 2, 3 and 4 represent the Super Scale multipliers 2x, 3x and 4x.
+    "superScale" - the property value is an enumerated integer between 0 and 4 with these meanings: 0=Auto, 1=no scaling, and 2, 3 and 4 represent the Super Scale multipliers 2x, 3x and 4x.
+                   for super scale multiplier '2x Enhanced', exactly 4 arguments must be passed as outlined below. If less than 4 arguments are passed, it will default to 2x.
     Affects:
     • x = Project:GetSetting('superScale') and Project:SetSetting('superScale', x)
+    • for '2x Enhanced' --> Project:SetSetting('superScale', 2, sharpnessValue, noiseReductionValue), where sharpnessValue is a float in the range [0.0, 1.0] and noiseReductionValue is a float in the range [0.0, 1.0]
 
     "timelineFrameRate" - the property value is one of the frame rates available to the user in project settings under "Timeline frame rate" option. Drop Frame can be configured for supported frame rates
                           by appending the frame rate with "DF", e.g. "29.97 DF" will enable drop frame and "29.97" will disable drop frame
@@ -368,9 +386,11 @@ class Resolve:
     • x = Project:GetSetting('timelineFrameRate') and Project:SetSetting('timelineFrameRate', x)
 
     The following Clip properties have specifically enumerated values:
-    "superScale" - the property value is an enumerated integer between 1 and 3 with these meanings: 1=no scaling, and 2, 3 and 4 represent the Super Scale multipliers 2x, 3x and 4x.
+    "Super Scale" - the property value is an enumerated integer between 1 and 4 with these meanings: 1=no scaling, and 2, 3 and 4 represent the Super Scale multipliers 2x, 3x and 4x.
+                    for super scale multiplier '2x Enhanced', exactly 4 arguments must be passed as outlined below. If less than 4 arguments are passed, it will default to 2x.
     Affects:
     • x = MediaPoolItem:GetClipProperty('Super Scale') and MediaPoolItem:SetClipProperty('Super Scale', x)
+    • for '2x Enhanced' --> MediaPoolItem:SetClipProperty('Super Scale', 2, sharpnessValue, noiseReductionValue), where sharpnessValue is a float in the range [0.0, 1.0] and noiseReductionValue is a float in the range [0.0, 1.0]
 
 
     Looking up Render Settings
@@ -424,6 +444,7 @@ class Resolve:
         - resolve.EXPORT_DOLBY_VISION_VER_2_9
         - resolve.EXPORT_DOLBY_VISION_VER_4_0
         - resolve.EXPORT_DOLBY_VISION_VER_5_1
+        - resolve.EXPORT_OTIO
     exportSubtype can be one of the following enums:
         - resolve.EXPORT_NONE
         - resolve.EXPORT_AAF_NEW
@@ -567,6 +588,7 @@ class Resolve:
     EXPORT_DOLBY_VISION_VER_2_9: Final
     EXPORT_DOLBY_VISION_VER_4_0: Final
     EXPORT_DOLBY_VISION_VER_5_1: Final
+    EXPORT_OTIO: Final
 
     EXPORT_NONE: Final
     EXPORT_AAF_NEW: Final
@@ -991,6 +1013,16 @@ class Project:
         """
         ...
 
+    def LoadBurnInPreset(self, presetName: str) -> bool:
+        """ Loads user defined data burn in preset for project when supplied presetName (string). Returns true if successful. """
+        ...
+
+    def ExportCurrentFrameAsStill(self, filePath: str) -> bool:
+        """
+        Exports current frame as still to supplied filePath. filePath must end in valid export file format.
+        Returns True if succssful, False otherwise.
+        """
+
 
 class MediaStorage:
 
@@ -1056,6 +1088,14 @@ class MediaStorage:
         Adds specified file/folder paths from Media Storage into current Media Pool folder.
         Input is an array of file/folder paths.
         Returns a list of the MediaPoolItems created.
+        """
+        ...
+
+    @overload
+    def AddItemListToMediaPool(self, itemInfo: List[MediaPoolItemInfo]) -> List[MediaPoolItem]:
+        """
+        Adds list of itemInfos specified as dict of "media", "startFrame" (int), "endFrame" (int)
+        from Media Storage into current Media Pool folder. Returns a list of the MediaPoolItems created.
         """
         ...
 
@@ -1125,7 +1165,8 @@ class MediaPool:
     @overload
     def AppendToTimeline(self, clipInfo: List[MediaPoolClipInfo]) -> [TimelineItem]:
         """
-        Appends list of clipInfos specified as dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int), (optional) "mediaType" (int; 1 - Video only, 2 - Audio only).
+        Appends list of clipInfos specified as dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int),
+        (optional) "mediaType" (int; 1 - Video only, 2 - Audio only), "trackIndex" (int) and "recordFrame" (int).
         Returns the list of appended timelineItems.
         """
         ...
@@ -1142,16 +1183,16 @@ class MediaPool:
 
     @overload
     def CreateTimelineFromClips(self, name: str, clipInfo: List[MediaPoolClipInfo]) -> Timeline:
-        """ Creates new timeline with specified name, appending the list of clipInfos specified as a dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int). """
+        """ Creates new timeline with specified name, appending the list of clipInfos specified as a dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int), "recordFrame" (int). """
         ...
 
     def ImportTimelineFromFile(self, filePath: str, importOptions: TimelineImportOptions) -> Timeline:
         """
-        Creates timeline based on parameters within given file and optional importOptions dict, with support for the keys:
-        "timelineName": string, specifies the name of the timeline to be created
-        "importSourceClips": Bool, specifies whether source clips should be imported, True by default
+        Creates timeline based on parameters within given file (AAF/EDL/XML/FCPXML/DRT/ADL) and optional importOptions dict, with support for the keys:
+        "timelineName": string, specifies the name of the timeline to be created. Not valid for DRT import
+        "importSourceClips": Bool, specifies whether source clips should be imported, True by default. Not valid for DRT import
         "sourceClipsPath": string, specifies a filesystem path to search for source clips if the media is inaccessible in their original path and if "importSourceClips" is True
-        "sourceClipsFolders": List of Media Pool folder objects to search for source clips if the media is not present in current folder and if "importSourceClips" is False
+        "sourceClipsFolders": List of Media Pool folder objects to search for source clips if the media is not present in current folder and if "importSourceClips" is False. Not valid for DRT import
         "interlaceProcessing": Bool, specifies whether to enable interlace processing on the imported timeline being created. valid only for AAF import
         """
         ...
@@ -1170,6 +1211,13 @@ class MediaPool:
     
     def DeleteClips(self, clips: List[MediaPoolItem]) -> bool:
         """ Deletes specified clips or timeline mattes in the media pool """
+        ...
+
+    def ImportFolderFromFile(self, filePath: str, sourceClipsPath: str = '') -> bool:
+        """
+        Returns true if import from given DRB filePath is successful, false otherwise
+        sourceClipsPath is a string that specifies a filesystem path to search for source clips if the media is inaccessible in their original path, empty by default
+        """
         ...
     
     def DeleteFolders(self, subfolders: List[Folder]) -> bool:
@@ -1269,6 +1317,10 @@ class Folder:
 
     def GetUniqueId(self) -> str:
         """ Returns a unique ID for the media pool folder """
+        ...
+
+    def Export(self, filePath: str) -> bool:
+        """ Returns true if export of DRB folder to filePath is successful, false otherwise """
         ...
 
 
@@ -1398,6 +1450,14 @@ class MediaPoolItem:
         """ Returns a unique ID for the media pool item """
         ...
 
+    def TranscribeAudio(self) -> bool:
+        """ Transcribes audio of the MediaPoolItem. Returns True if successful; False otherwise """
+        ...
+
+    def ClearTranscription(self) -> bool:
+        """ Clears audio transcription of the MediaPoolItem. Returns True if successful; False otherwise. """
+        ...
+
 
 class Timeline:
     
@@ -1428,7 +1488,60 @@ class Timeline:
     def GetTrackCount(self, trackType: TrackType) -> int:
         """ Returns the number of tracks for the given track type ("audio", "video" or "subtitle"). """
         ...
-    
+
+    def AddTrack(self, trackType: TrackType, optionalSubTrackType: SubTrackType) -> bool:
+        """
+        Adds track of trackType ("video", "subtitle", "audio"). Second argument optionalSubTrackType is required for "audio"
+        optionalSubTrackType can be one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"}
+        """
+        ...
+
+    def DeleteTrack(self, trackType: TrackType, trackIndex: int) -> bool:
+        """ Deletes track of trackType ("video", "subtitle", "audio") and given trackIndex. 1 <= trackIndex <= GetTrackCount(trackType). """
+        ...
+
+    def SetTrackEnable(self, trackType: TrackType, trackIndex: int, Bool: bool) -> bool:
+        """
+        Enables/Disables track with given trackType and trackIndex
+        trackType is one of {"audio", "video", "subtitle"}
+        1 <= trackIndex <= GetTrackCount(trackType).
+        """
+        ...
+
+    def GetIsTrackEnabled(self, trackType: TrackType, trackIndex: int) -> bool:
+        """
+        Returns True if track with given trackType and trackIndex is enabled and False otherwise.
+        trackType is one of {"audio", "video", "subtitle"}
+        1 <= trackIndex <= GetTrackCount(trackType).
+        """
+        ...
+
+    def SetTrackLock(self, trackType: TrackType, trackIndex: int, Bool: bool) -> bool:
+        """
+        Locks/Unlocks track with given trackType and trackIndex
+        trackType is one of {"audio", "video", "subtitle"}
+        1 <= trackIndex <= GetTrackCount(trackType).
+        """
+        ...
+
+    def GetIsTrackLocked(self, trackType: TrackType, trackIndex: int) -> bool:
+        """
+        Returns True if track with given trackType and trackIndex is locked and False otherwise.
+        trackType is one of {"audio", "video", "subtitle"}
+        1 <= trackIndex <= GetTrackCount(trackType).
+        """
+        ...
+
+    def DeleteClips(self, timelineItems: List[TimelineItem], Bool: bool) -> bool:
+        """
+        Deletes specified TimelineItems from the timeline, performing ripple delete if the second argument is True.
+        Second argument is optional (The default for this is False)
+        """
+
+    def SetClipsLinked(self, timelineItems: List[TimelineItem], Bool: bool) -> bool:
+        """ Links or unlinks the specified TimelineItems depending on second argument. """
+        ...
+
     def GetItemListInTrack(self, trackType: TrackType, index: int) -> List[TimelineItem]:
         """ Returns a list of timeline items on that track (based on trackType and index). 1 <= index <= GetTrackCount(trackType). """
         ...
@@ -1595,6 +1708,14 @@ class Timeline:
 
     def GetUniqueId(self) -> str:
         """ Returns a unique ID for the timeline """
+        ...
+
+    def CreateSubtitlesFromAudio(self) -> bool:
+        """ Creates subtitles from audio for the timeline. Returns True on success, False otherwise. """
+        ...
+
+    def DetectSceneCuts(self) -> bool:
+        """ Detects and makes scene cuts along the timeline. Returns True if successful, False otherwise. """
         ...
 
 
@@ -1820,6 +1941,10 @@ class TimelineItem:
         """ Returns the number of nodes in the current graph for the timeline item """
         ...
 
+    def ApplyArriCdlLut(self) -> bool:
+        """ Applies ARRI CDL and LUT. Returns True if successful, False otherwise. """
+        ...
+
     def SetLUT(self, nodeIndex: int, lutPath: str) -> bool:
         """
         Sets LUT on the node mapping the node index provided, 1 <= nodeIndex <= total number of nodes.
@@ -1877,12 +2002,44 @@ class TimelineItem:
         """
         ...
 
+    def SetClipEnabled(self, Bool: bool) -> bool:
+        """ Sets clip enabled based on argument. """
+        ...
+
+    def GetClipEnabled(self) -> bool:
+        """ Gets clip enabled status. """
+        ...
+
     def UpdateSidecar(self) -> bool:
         """ Updates sidecar file for BRAW clips or RMD file for R3D clips. """
         ...
 
     def GetUniqueId(self) -> str:
         """ Returns a unique ID for the timeline item """
+        ...
+
+    def LoadBurnInPreset(self, presetName: str) -> bool:
+        """ Loads user defined data burn in preset for clip when supplied presetName (string). Returns true if successful. """
+        ...
+
+    def GetNodeLabel(self, nodeIndex: int) -> str:
+        """ Returns the label of the node at nodeIndex. """
+        ...
+
+    def CreateMagicMask(self, mode: MagicMaskMode) -> bool:
+        """ Returns True if magic mask was created successfully, False otherwise. mode can "F" (forward), "B" (backward), or "BI" (bidirection) """
+        ...
+
+    def RegenerateMagicMask(self) -> bool:
+        """ Returns True if magic mask was regenerated successfully, False otherwise. """
+        ...
+
+    def Stabilize(self) -> bool:
+        """ Returns True if stabilization was successful, False otherwise """
+        ...
+
+    def SmartReframe(self) -> bool:
+        """ Performs Smart Reframe. Returns True if successful, False otherwise. """
         ...
 
 
