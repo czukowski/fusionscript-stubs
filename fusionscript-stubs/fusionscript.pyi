@@ -666,6 +666,22 @@ class Resolve:
         """ Quits the Resolve App. """
         ...
 
+    def ImportRenderPreset(self, presetPath: str) -> bool:
+        """ Import a preset from presetPath (string) and set it as current preset for rendering. """
+        ...
+
+    def ExportRenderPreset(self, presetName: str, exportPath: str) -> bool:
+        """ Export a preset to a given path (string) if presetName(string) exists. """
+        ...
+
+    def ImportBurnInPreset(self, presetPath: str) -> bool:
+        """ Import a data burn in preset from a given presetPath (string) """
+        ...
+
+    def ExportBurnInPreset(self, presetName: str, exportPath: str) -> bool:
+        """ Export a data burn in preset to a given path (string) if presetName (string) exists. """
+        ...
+
 
 class ProjectManager:
 
@@ -2080,10 +2096,14 @@ class GalleryStillAlbum:
         """ Sets the new 'label' to GalleryStill object 'galleryStill'. """
         ...
 
+    def ImportStills(self, filePaths: List[str]) -> bool:
+        """ Imports GalleryStill from each filePath in [filePaths] list. True if at least one still is imported successfully. False otherwise. """
+        ...
+
     def ExportStills(self, galleryStills: List[GalleryStill], folderPath: str, filePrefix: str, format: GalleryStillExportFormat) -> bool:
         """
         Exports list of GalleryStill objects '[galleryStill]' to directory 'folderPath', with filename prefix 'filePrefix',
-        using file format 'format' (supported formats: dpx, cin, tif, jpg, png, ppm, bmp, xpm).
+        using file format 'format' (supported formats: dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx).
         """
 
     def DeleteStills(self, galleryStills: List[GalleryStill]) -> bool:
