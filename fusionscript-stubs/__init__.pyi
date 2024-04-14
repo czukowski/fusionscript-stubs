@@ -111,7 +111,9 @@ from .fusionscript import (
 
 # Typed dicts
 from .fusionscript import (
+    AutoCaptionSettings as AutoCaptionSettings,
     CDLMap as CDLMap,
+    CloudProjectsSettings as CloudProjectsSettings,
     DbInfo as DbInfo,
     FloatingWindowParams as FloatingWindowParams,
     ImportClipInfo as ImportClipInfo,

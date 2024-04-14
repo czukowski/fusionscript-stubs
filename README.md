@@ -41,9 +41,9 @@ Patches are welcome to fix any errors in the stubs!
 About versioning
 ----------------
 
-The stubs package major and minor version numbers (eg. 18.6) indicate compatibility 
-with the corresponding DaVinci Resolve version and is based on the documentaton 
+The stubs package major and minor version numbers (e.g. 18.6) indicate compatibility 
+with the corresponding DaVinci Resolve version and is based on the documentation 
 (scripting README.txt) shipped with that version. The patch version number is incremental
 and does not correspond to DaVinci Resolve releases.
 
-The current stubs are based on the documentation marked as "Updated as of 18 July 2023". 
+The current stubs are based on the documentation marked as "Updated as of 18 December 2023". 

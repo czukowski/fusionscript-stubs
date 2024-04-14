@@ -1,7 +1,13 @@
-from typing import Any, Final, List, NotRequired, Optional, TypedDict
+from typing import Annotated, Any, Final, List, NotRequired, Optional, TypedDict
 from typing import overload
 from typing_extensions import Literal
+from dataclasses import dataclass
 from deprecated import deprecated
+
+@dataclass
+class ValueRange:
+    min: int
+    max: int
 
 
 ColorSet1 = Literal['Orange', 'Apricot', 'Yellow', 'Lime', 'Olive', 'Green', 'Teal', 'Navy', 'Blue', 'Purple', 'Violet', 'Pink', 'Tan', 'Beige', 'Brown', 'Chocolate']
@@ -68,6 +74,37 @@ UniqueFilenameStyle = Literal[0, 1]
 
 VersionType = Literal[0, 1]
 """ 0 - Local, 1 - Remote """
+
+AutoCaptionSettings = TypedDict('AutoCaptionSettings', {
+    Resolve.SUBTITLE_LANGUAGE: Literal[Resolve.AUTO_CAPTION_AUTO, \
+                                       Resolve.AUTO_CAPTION_DANISH, \
+                                       Resolve.AUTO_CAPTION_DUTCH, \
+                                       Resolve.AUTO_CAPTION_ENGLISH, \
+                                       Resolve.AUTO_CAPTION_FRENCH, \
+                                       Resolve.AUTO_CAPTION_GERMAN, \
+                                       Resolve.AUTO_CAPTION_ITALIAN, \
+                                       Resolve.AUTO_CAPTION_JAPANESE, \
+                                       Resolve.AUTO_CAPTION_KOREAN, \
+                                       Resolve.AUTO_CAPTION_MANDARIN_SIMPLIFIED, \
+                                       Resolve.AUTO_CAPTION_MANDARIN_TRADITIONAL, \
+                                       Resolve.AUTO_CAPTION_NORWEGIAN, \
+                                       Resolve.AUTO_CAPTION_PORTUGUESE, \
+                                       Resolve.AUTO_CAPTION_RUSSIAN, \
+                                       Resolve.AUTO_CAPTION_SPANISH, \
+                                       Resolve.AUTO_CAPTION_SWEDISH],
+    Resolve.SUBTITLE_CAPTION_PRESET: Resolve.AUTO_CAPTION_SUBTITLE_DEFAULT | Resolve.AUTO_CAPTION_TELETEXT | Resolve.AUTO_CAPTION_NETFLIX,
+    Resolve.SUBTITLE_CHARS_PER_LINE: Annotated[int, ValueRange(1, 60)],
+    Resolve.SUBTITLE_LINE_BREAK: Literal[Resolve.AUTO_CAPTION_LINE_SINGLE, Resolve.AUTO_CAPTION_LINE_DOUBLE],
+    Resolve.SUBTITLE_GAP: Annotated[int, ValueRange(0, 10)],
+})
+
+CloudProjectsSettings = TypedDict('CloudProjectsSettings', {
+    Resolve.CLOUD_SETTING_PROJECT_NAME: str,
+    Resolve.CLOUD_SETTING_PROJECT_MEDIA_PATH: str,
+    Resolve.CLOUD_SETTING_IS_COLLAB: bool,
+    Resolve.CLOUD_SETTING_SYNC_MODE: Literal[Resolve.CLOUD_SYNC_NONE, Resolve.CLOUD_SYNC_PROXY_ONLY, Resolve.CLOUD_SYNC_PROXY_AND_ORIG],
+    Resolve.CLOUD_SETTING_IS_CAMERA_ACCESS: bool,
+})
 
 
 class CDLMap(TypedDict):
@@ -353,6 +390,24 @@ class Resolve:
     As Lua does not support list and dict data structures, the Lua API implements "list" as a table with indices, e.g. { [1] = listValue1, [2] = listValue2, ... }.
     Similarly the Lua API implements "dict" as a table with the dictionary key as first element, e.g. { [dictKey1] = dictValue1, [dictKey2] = dictValue2, ... }.
 
+    Cloud Projects Settings
+    --------------------------------------
+    This section covers additional notes for the functions "ProjectManager:CreateCloudProject," "ProjectManager:ImportCloudProject," and "ProjectManager:RestoreCloudProject"
+
+    All three functions take in a {cloudSettings} dict, that have the following keys:
+    * resolve.CLOUD_SETTING_PROJECT_NAME: String, ["" by default]
+    * resolve.CLOUD_SETTING_PROJECT_MEDIA_PATH: String, ["" by default]
+    * resolve.CLOUD_SETTING_IS_COLLAB: Bool, [False by default]
+    * resolve.CLOUD_SETTING_SYNC_MODE: syncMode (see below), [resolve.CLOUD_SYNC_PROXY_ONLY by default]
+    * resolve.CLOUD_SETTING_IS_CAMERA_ACCESS: Bool [False by default]
+
+    Where syncMode is one of the following values:
+    * resolve.CLOUD_SYNC_NONE,
+    * resolve.CLOUD_SYNC_PROXY_ONLY,
+    * resolve.CLOUD_SYNC_PROXY_AND_ORIG
+
+    All three "ProjectManager:CreateCloudProject," "ProjectManager:ImportCloudProject," and "ProjectManager:RestoreCloudProject" require resolve.PROJECT_MEDIA_PATH to be defined. "ProjectManager:CreateCloudProject" also requires resolve.PROJECT_NAME to be defined.
+
     Looking up Project and Clip properties
     --------------------------------------
     This section covers additional notes for the functions "Project:GetSetting", "Project:SetSetting", "Timeline:GetSetting", "Timeline:SetSetting", "MediaPoolItem:GetClipProperty" and
@@ -391,6 +446,50 @@ class Resolve:
     Affects:
     • x = MediaPoolItem:GetClipProperty('Super Scale') and MediaPoolItem:SetClipProperty('Super Scale', x)
     • for '2x Enhanced' --> MediaPoolItem:SetClipProperty('Super Scale', 2, sharpnessValue, noiseReductionValue), where sharpnessValue is a float in the range [0.0, 1.0] and noiseReductionValue is a float in the range [0.0, 1.0]
+
+    Auto Caption Settings
+    ----------------------
+    This section covers the supported settings for the method Timeline.CreateSubtitlesFromAudio({autoCaptionSettings})
+
+    The parameter setting is a dictionary containing the following keys:
+    * resolve.SUBTITLE_LANGUAGE: languageID (see below), [resolve.AUTO_CAPTION_AUTO by default]
+    * resolve.SUBTITLE_CAPTION_PRESET: presetType (see below), [resolve.AUTO_CAPTION_SUBTITLE_DEFAULT by default]
+    * resolve.SUBTITLE_CHARS_PER_LINE: Number between 1 and 60 inclusive [42 by default]
+    * resolve.SUBTITLE_LINE_BREAK: lineBreakType (see below), [resolve.AUTO_CAPTION_LINE_SINGLE by default]
+    * resolve.SUBTITLE_GAP: Number between 0 and 10 inclusive [0 by default]
+
+    Note that the default values for some keys may change based on values defined for other keys, as per the UI.
+    For example, if the following dictionary is supplied,
+        CreateSubtitlesFromAudio( { resolve.SUBTITLE_LANGUAGE = resolve.AUTO_CAPTION_KOREAN,
+                                    resolve.SUBTITLE_CAPTION_PRESET = resolve.AUTO_CAPTION_NETFLIX } )
+    the default value for resolve.SUBTITLE_CHARS_PER_LINE will be 16 instead of 42
+
+    languageIDs:
+    * resolve.AUTO_CAPTION_AUTO
+    * resolve.AUTO_CAPTION_DANISH
+    * resolve.AUTO_CAPTION_DUTCH
+    * resolve.AUTO_CAPTION_ENGLISH
+    * resolve.AUTO_CAPTION_FRENCH
+    * resolve.AUTO_CAPTION_GERMAN
+    * resolve.AUTO_CAPTION_ITALIAN
+    * resolve.AUTO_CAPTION_JAPANESE
+    * resolve.AUTO_CAPTION_KOREAN
+    * resolve.AUTO_CAPTION_MANDARIN_SIMPLIFIED
+    * resolve.AUTO_CAPTION_MANDARIN_TRADITIONAL
+    * resolve.AUTO_CAPTION_NORWEGIAN
+    * resolve.AUTO_CAPTION_PORTUGUESE
+    * resolve.AUTO_CAPTION_RUSSIAN
+    * resolve.AUTO_CAPTION_SPANISH
+    * resolve.AUTO_CAPTION_SWEDISH
+
+    presetTypes:
+    * resolve.AUTO_CAPTION_SUBTITLE_DEFAULT
+    * resolve.AUTO_CAPTION_TELETEXT
+    * resolve.AUTO_CAPTION_NETFLIX
+
+    lineBreakTypes:
+    * resolve.AUTO_CAPTION_LINE_SINGLE
+    * resolve.AUTO_CAPTION_LINE_DOUBLE
 
 
     Looking up Render Settings
@@ -574,6 +673,40 @@ class Resolve:
     Getting the values for the keys that uses constants will return the number which is in the constant
     """
 
+    AUTO_CAPTION_AUTO: Final
+    AUTO_CAPTION_DANISH: Final
+    AUTO_CAPTION_DUTCH: Final
+    AUTO_CAPTION_ENGLISH: Final
+    AUTO_CAPTION_FRENCH: Final
+    AUTO_CAPTION_GERMAN: Final
+    AUTO_CAPTION_ITALIAN: Final
+    AUTO_CAPTION_JAPANESE: Final
+    AUTO_CAPTION_KOREAN: Final
+    AUTO_CAPTION_MANDARIN_SIMPLIFIED: Final
+    AUTO_CAPTION_MANDARIN_TRADITIONAL: Final
+    AUTO_CAPTION_NORWEGIAN: Final
+    AUTO_CAPTION_PORTUGUESE: Final
+    AUTO_CAPTION_RUSSIAN: Final
+    AUTO_CAPTION_SPANISH: Final
+    AUTO_CAPTION_SWEDISH: Final
+
+    AUTO_CAPTION_SUBTITLE_DEFAULT: Final
+    AUTO_CAPTION_TELETEXT: Final
+    AUTO_CAPTION_NETFLIX: Final
+
+    AUTO_CAPTION_LINE_SINGLE: Final
+    AUTO_CAPTION_LINE_DOUBLE: Final
+
+    CLOUD_SETTING_PROJECT_NAME: Final
+    CLOUD_SETTING_PROJECT_MEDIA_PATH: Final
+    CLOUD_SETTING_IS_COLLAB: Final
+    CLOUD_SETTING_SYNC_MODE: Final
+    CLOUD_SETTING_IS_CAMERA_ACCESS: Final
+
+    CLOUD_SYNC_NONE: Final
+    CLOUD_SYNC_PROXY_ONLY: Final
+    CLOUD_SYNC_PROXY_AND_ORIG: Final
+
     EXPORT_AAF: Final
     EXPORT_DRT: Final
     EXPORT_EDL: Final
@@ -596,6 +729,12 @@ class Resolve:
     EXPORT_CDL: Final
     EXPORT_SDL: Final
     EXPORT_MISSING_CLIPS: Final
+
+    SUBTITLE_LANGUAGE: Final
+    SUBTITLE_CAPTION_PRESET: Final
+    SUBTITLE_CHARS_PER_LINE: Final
+    SUBTITLE_LINE_BREAK: Final
+    SUBTITLE_GAP: Final
 
     def Fusion(self) -> Fusion:
         """ Returns the Fusion object. Starting point for Fusion scripts. """
@@ -785,6 +924,29 @@ class ProjectManager:
 
     def SetCurrentDatabase(self, dbInfo: DbInfo) -> bool:
         """ Switches current database connection to the database specified by the keys below, and closes any open project. """
+        ...
+
+    def CreateCloudProject(self, cloudSettings: CloudProjectsSettings) -> Project:
+        """
+        Creates and returns a cloud project.
+        '{cloudSettings}': Check 'Cloud Projects Settings' subsection below for more information.
+        """
+        ...
+
+    def ImportCloudProject(self, filePath: str, cloudSettings: CloudProjectsSettings) -> bool:
+        """
+        Returns True if import cloud project is successful; False otherwise
+        'filePath': String; filePath of file to import
+        '{cloudSettings}': Check 'Cloud Projects Settings' subsection below for more information.
+        """
+        ...
+
+    def RestoreCloudProject(self, folderPath: str, cloudSettings: CloudProjectsSettings) -> bool:
+        """
+        Returns True if restore cloud project is successful; False otherwise
+        'folderPath': String; path of folder to restore
+        '{cloudSettings}': Check 'Cloud Projects Settings' subsection below for more information.
+        """
         ...
 
 
@@ -1204,7 +1366,7 @@ class MediaPool:
 
     def ImportTimelineFromFile(self, filePath: str, importOptions: TimelineImportOptions) -> Timeline:
         """
-        Creates timeline based on parameters within given file (AAF/EDL/XML/FCPXML/DRT/ADL) and optional importOptions dict, with support for the keys:
+        Creates timeline based on parameters within given file (AAF/EDL/XML/FCPXML/DRT/ADL/OTIO) and optional importOptions dict, with support for the keys:
         "timelineName": string, specifies the name of the timeline to be created. Not valid for DRT import
         "importSourceClips": Bool, specifies whether source clips should be imported, True by default. Not valid for DRT import
         "sourceClipsPath": string, specifies a filesystem path to search for source clips if the media is inaccessible in their original path and if "importSourceClips" is True
@@ -1296,6 +1458,10 @@ class MediaPool:
         """ Returns a unique ID for the media pool """
         ...
 
+    def CreateStereoClip(str, LeftMediaPoolItem: MediaPoolItem, RightMediaPoolItem: MediaPoolItem) -> MediaPoolItem:
+        """ Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool. """
+        ...
+
 
 class Folder:
 
@@ -1337,6 +1503,14 @@ class Folder:
 
     def Export(self, filePath: str) -> bool:
         """ Returns true if export of DRB folder to filePath is successful, false otherwise """
+        ...
+
+    def TranscribeAudio(self) -> bool:
+        """ Transcribes audio of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise """
+        ...
+
+    def ClearTranscription(self) -> bool:
+        """ Clears audio transcription of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise. """
         ...
 
 
@@ -1726,12 +1900,20 @@ class Timeline:
         """ Returns a unique ID for the timeline """
         ...
 
-    def CreateSubtitlesFromAudio(self) -> bool:
-        """ Creates subtitles from audio for the timeline. Returns True on success, False otherwise. """
+    def CreateSubtitlesFromAudio(self, autoCaptionSettings: Optional[AutoCaptionSettings]) -> bool:
+        """
+        Creates subtitles from audio for the timeline.
+        Takes in optional dictionary {autoCaptionSettings}. Check 'Auto Caption Settings' subsection below for more information.
+        Returns True on success, False otherwise.
+        """
         ...
 
     def DetectSceneCuts(self) -> bool:
         """ Detects and makes scene cuts along the timeline. Returns True if successful, False otherwise. """
+        ...
+
+    def ConvertTimelineToStereo(self) -> bool:
+        """ Converts timeline to stereo. Returns True if successful; False otherwise. """
         ...
 
 
