@@ -22,6 +22,19 @@ GalleryStillExportFormat = Literal['dpx', 'cin', 'tif', 'jpg', 'png', 'ppm', 'bm
 GradeMode = Literal[0, 1, 2]
 """ 0 - "No keyframes", 1 - "Source Timecode aligned", 2 - "Start Frames aligned" """
 
+KeyframeMode = Literal[
+    Resolve.KEYFRAME_MODE_ALL,
+    Resolve.KEYFRAME_MODE_COLOR,
+    Resolve.KEYFRAME_MODE_SIZING,
+]
+
+LUTExportType = Literal[
+    Resolve.EXPORT_LUT_17PTCUBE,
+    Resolve.EXPORT_LUT_33PTCUBE,
+    Resolve.EXPORT_LUT_65PTCUBE,
+    Resolve.EXPORT_LUT_PANASONICVLUT,
+]
+
 MagicMaskMode = Literal['F', 'B', 'BI']
 """ 'F' - forward, 'B' - backward, 'BI' - bidirection """
 
@@ -56,6 +69,8 @@ TimelineExportType = Literal[
     Resolve.EXPORT_DOLBY_VISION_VER_4_0,
     Resolve.EXPORT_DOLBY_VISION_VER_5_1,
     Resolve.EXPORT_OTIO,
+    Resolve.EXPORT_ALE,
+    Resolve.EXPORT_ALE_CDL,
 ]
 
 TimelineExportSubtype = Literal[
@@ -356,7 +371,8 @@ MOTION_EST_STANDARD_FASTER: Final
 MOTION_EST_STANDARD_BETTER: Final
 MOTION_EST_ENHANCED_FASTER: Final
 MOTION_EST_ENHANCED_BETTER: Final
-MOTION_EST_SPEED_WRAP: Final
+MOTION_EST_SPEED_WARP_BETTER: Final
+MOTION_EST_SPEED_WARP_FASTER: Final
 
 SCALE_USE_PROJECT: Final = 0
 SCALE_CROP: Final
@@ -389,6 +405,17 @@ class Resolve:
     Beside primitive data types, Resolve's Python API mainly uses list and dict data structures. Lists are denoted by [ ... ] and dicts are denoted by { ... } above.
     As Lua does not support list and dict data structures, the Lua API implements "list" as a table with indices, e.g. { [1] = listValue1, [2] = listValue2, ... }.
     Similarly the Lua API implements "dict" as a table with the dictionary key as first element, e.g. { [dictKey1] = dictValue1, [dictKey2] = dictValue2, ... }.
+
+    Keyframe Mode information
+    -------------------------
+    This section covers additional notes for the functions Resolve.GetKeyframeMode() and Resolve.SetKeyframeMode(keyframeMode).
+
+    'keyframeMode' can be one of the following enums:
+        - resolve.KEYFRAME_MODE_ALL     == 0
+        - resolve.KEYFRAME_MODE_COLOR   == 1
+        - resolve.KEYFRAME_MODE_SIZING  == 2
+
+    Integer values returned by Resolve.GetKeyframeMode() will correspond to the enums above.
 
     Cloud Projects Settings
     --------------------------------------
@@ -544,6 +571,8 @@ class Resolve:
         - resolve.EXPORT_DOLBY_VISION_VER_4_0
         - resolve.EXPORT_DOLBY_VISION_VER_5_1
         - resolve.EXPORT_OTIO
+        - resolve.EXPORT_ALE
+        - resolve.EXPORT_ALE_CDL
     exportSubtype can be one of the following enums:
         - resolve.EXPORT_NONE
         - resolve.EXPORT_AAF_NEW
@@ -640,7 +669,8 @@ class Resolve:
          - MOTION_EST_STANDARD_BETTER
          - MOTION_EST_ENHANCED_FASTER
          - MOTION_EST_ENHANCED_BETTER
-         - MOTION_EST_SPEED_WRAP
+         - MOTION_EST_SPEED_WARP_BETTER
+         - MOTION_EST_SPEED_WARP_FASTER
       "Scaling" : A value from the following constants
          - SCALE_USE_PROJECT = 0
          - SCALE_CROP
@@ -671,6 +701,16 @@ class Resolve:
     as a single argument.
 
     Getting the values for the keys that uses constants will return the number which is in the constant
+
+    ExportLUT notes
+    ---------------
+    The following section covers additional notes for TimelineItem.ExportLUT(exportType, path).
+
+    Supported values for 'exportType' (enum) are:
+        - resolve.EXPORT_LUT_17PTCUBE
+        - resolve.EXPORT_LUT_33PTCUBE
+        - resolve.EXPORT_LUT_65PTCUBE
+        - resolve.EXPORT_LUT_PANASONICVLUT
     """
 
     AUTO_CAPTION_AUTO: Final
@@ -696,6 +736,10 @@ class Resolve:
 
     AUTO_CAPTION_LINE_SINGLE: Final
     AUTO_CAPTION_LINE_DOUBLE: Final
+
+    KEYFRAME_MODE_ALL: 0
+    KEYFRAME_MODE_COLOR: 1
+    KEYFRAME_MODE_SIZING: 2
 
     CLOUD_SETTING_PROJECT_NAME: Final
     CLOUD_SETTING_PROJECT_MEDIA_PATH: Final
@@ -729,6 +773,11 @@ class Resolve:
     EXPORT_CDL: Final
     EXPORT_SDL: Final
     EXPORT_MISSING_CLIPS: Final
+
+    EXPORT_LUT_17PTCUBE: Final
+    EXPORT_LUT_33PTCUBE: Final
+    EXPORT_LUT_65PTCUBE: Final
+    EXPORT_LUT_PANASONICVLUT: Final
 
     SUBTITLE_LANGUAGE: Final
     SUBTITLE_CAPTION_PRESET: Final
@@ -819,6 +868,20 @@ class Resolve:
 
     def ExportBurnInPreset(self, presetName: str, exportPath: str) -> bool:
         """ Export a data burn in preset to a given path (string) if presetName (string) exists. """
+        ...
+
+    def GetKeyframeMode(self) -> KeyframeMode:
+        """
+        Returns the currently set keyframe mode (int).
+        Refer to section 'Keyframe Mode information' below for details.
+        """
+        ...
+
+    def SetKeyframeMode(self, keyframeMode: KeyframeMode) -> bool:
+        """
+        Returns True when 'keyframeMode'(enum) is successfully set.
+        Refer to section 'Keyframe Mode information' below for details.
+        """
         ...
 
 
@@ -1200,6 +1263,18 @@ class Project:
         Exports current frame as still to supplied filePath. filePath must end in valid export file format.
         Returns True if succssful, False otherwise.
         """
+
+    def GetColorGroupsList(self) -> List[ColorGroup]:
+        """ Returns a list of all group objects in the timeline. """
+        ...
+
+    def AddColorGroup(self, groupName: str) -> ColorGroup:
+        """ Creates a new ColorGroup. groupName must be a unique string. """
+        ...
+
+    def DeleteColorGroup(self, colorGroup: ColorGroup) -> bool:
+        """ Deletes the given color group and sets clips to ungrouped. """
+        ...
 
 
 class MediaStorage:
@@ -1916,6 +1991,10 @@ class Timeline:
         """ Converts timeline to stereo. Returns True if successful; False otherwise. """
         ...
 
+    def GetNodeGraph(self) -> Graph:
+        """ Returns the timeline's node graph object. """
+        ...
+
 
 class TimelineItem:
 
@@ -2135,24 +2214,37 @@ class TimelineItem:
         """
         ...
 
+    @deprecated
     def GetNumNodes(self) -> int:
-        """ Returns the number of nodes in the current graph for the timeline item """
+        """
+        Deprecated!
+
+        Returns the number of nodes in the current graph for the timeline item.
+        """
         ...
 
     def ApplyArriCdlLut(self) -> bool:
         """ Applies ARRI CDL and LUT. Returns True if successful, False otherwise. """
         ...
 
+    @deprecated
     def SetLUT(self, nodeIndex: int, lutPath: str) -> bool:
         """
+        Deprecated!
+
         Sets LUT on the node mapping the node index provided, 1 <= nodeIndex <= total number of nodes.
         The lutPath can be an absolute path, or a relative path (based off custom LUT paths or the master LUT path).
         The operation is successful for valid lut paths that Resolve has already discovered (see Project.RefreshLUTList).
         """
         ...
 
+    @deprecated
     def GetLUT(self, nodeIndex: int) -> str:
-        """ Gets relative LUT path based on the node index provided, 1 <= nodeIndex <= total number of nodes. """
+        """
+        Deprecated!
+
+        Gets relative LUT path based on the node index provided, 1 <= nodeIndex <= total number of nodes.
+        """
         ...
 
     def SetCDL(self, cdlMap: CDLMap) -> bool:
@@ -2220,8 +2312,13 @@ class TimelineItem:
         """ Loads user defined data burn in preset for clip when supplied presetName (string). Returns true if successful. """
         ...
 
+    @deprecated
     def GetNodeLabel(self, nodeIndex: int) -> str:
-        """ Returns the label of the node at nodeIndex. """
+        """
+        Deprecated!
+
+        Returns the label of the node at nodeIndex.
+        """
         ...
 
     def CreateMagicMask(self, mode: MagicMaskMode) -> bool:
@@ -2238,6 +2335,33 @@ class TimelineItem:
 
     def SmartReframe(self) -> bool:
         """ Performs Smart Reframe. Returns True if successful, False otherwise. """
+        ...
+
+    def GetNodeGraph(self) -> Graph:
+        """ Returns the clip's node graph object. """
+        ...
+
+    def GetColorGroup(self) -> ColorGroup:
+        """ Returns the clip's color group if one exists. """
+        ...
+
+    def AssignToColorGroup(self, colorGroup: ColorGroup) -> bool:
+        """
+        Returns True if TiItem to successfully assigned to given ColorGroup.
+        ColorGroup must be an existing group in the current project.
+        """
+        ...
+
+    def RemoveFromColorGroup(self) -> bool:
+        """ Returns True if the TiItem is successfully removed from the ColorGroup it is in. """
+        ...
+
+    def ExportLUT(self, exportType: LUTExportType, path: str) -> bool:
+        """
+        Exports LUTs from tiItem referring to value passed in 'exportType' (enum) for LUT size. Refer to. 'ExportLUT notes' section for possible values.
+        Saves generated LUT in the provided 'path' (string). 'path' should include the intended file name.
+        If an empty or incorrect extension is provided, the appropriate extension (.cube/.vlt) will be appended at the end of the path.
+        """
         ...
 
 
@@ -2297,6 +2421,58 @@ class GalleryStill:
     """ This class does not provide any API functions but the object type is used by functions in other classes. """
     pass
 
+
+class Graph:
+
+    def GetNumNodes(self) -> int:
+        """ Returns the number of nodes in the graph """
+        ...
+
+    def SetLUT(self, nodeIndex: int, lutPath: str) -> bool:
+        """
+        Sets LUT on the node mapping the node index provided, 1 <= nodeIndex <= self.GetNumNodes().
+        The lutPath can be an absolute path, or a relative path (based off custom LUT paths or the master LUT path).
+        The operation is successful for valid lut paths that Resolve has already discovered (see Project.RefreshLUTList).
+        """
+        ...
+
+    def GetLUT(self, nodeIndex: int) -> str:
+        """ Gets relative LUT path based on the node index provided, 1 <= nodeIndex <= total number of nodes. """
+        ...
+
+    def GetNodeLabel(self, nodeIndex: int) -> str:
+        """ Returns the label of the node at nodeIndex. """
+        ...
+
+    def GetToolsInNode(self, nodeIndex: int) -> List[str]:
+        """ Returns toolsList (list of strings) of the tools used in the node indicated by given nodeIndex (int). """
+        ...
+
+
+class ColorGroup:
+
+    def GetName(self) -> str:
+        """ Returns the name (string) of the ColorGroup. """
+        ...
+
+    def SetName(self, groupName: str) -> bool:
+        """ Renames ColorGroup to groupName (string). """
+        ...
+
+    def GetClipsInTimeline(self, timeline: Optional[Timeline]) -> List[TimelineItem]:
+        """
+        Returns a list of TimelineItem that are in colorGroup in the given Timeline.
+        Timeline is Current Timeline by default.
+        """
+        ...
+
+    def GetPreClipNodeGraph(self) -> Graph:
+        """ Returns the ColorGroup Pre-clip graph. """
+        ...
+
+    def GetPostClipNodeGraph(self) -> Graph:
+        """ Returns the ColorGroup Post-clip graph. """
+        ...
 
 
 class Fusion:
