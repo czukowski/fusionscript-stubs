@@ -1688,7 +1688,7 @@ class MediaPoolItem:
         """ Returns the clip name. """
         ...
 
-    def GetMetadata(self, metadataType: Optional[str]) -> str|dict:
+    def GetMetadata(self, metadataType: Optional[str]) -> str | dict:
         """
         Returns the metadata value for the key 'metadataType'.
         If no argument is specified, a dict of all set metadata properties is returned.
