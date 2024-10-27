@@ -188,6 +188,11 @@ class MediaPoolItemInfo(TypedDict):
     endFrame: int
 
 
+class NewTrackOptions(TypedDict):
+    audiotype: SubTrackType
+    index: int
+
+
 class Preset(TypedDict):
     """ No documentation available """
     pass
@@ -474,6 +479,69 @@ class Resolve:
     • x = MediaPoolItem:GetClipProperty('Super Scale') and MediaPoolItem:SetClipProperty('Super Scale', x)
     • for '2x Enhanced' --> MediaPoolItem:SetClipProperty('Super Scale', 2, sharpnessValue, noiseReductionValue), where sharpnessValue is a float in the range [0.0, 1.0] and noiseReductionValue is a float in the range [0.0, 1.0]
 
+    "Cloud Sync" = the property value is an enumerated integer that will correspond to one of the following enums:
+    * resolve.CLOUD_SYNC_DEFAULT                == -1
+    * resolve.CLOUD_SYNC_DOWNLOAD_IN_QUEUE      == 0
+    * resolve.CLOUD_SYNC_DOWNLOAD_IN_PROGRESS   == 1
+    * resolve.CLOUD_SYNC_DOWNLOAD_SUCCESS       == 2
+    * resolve.CLOUD_SYNC_DOWNLOAD_FAIL          == 3
+    * resolve.CLOUD_SYNC_DOWNLOAD_NOT_FOUND     == 4
+
+    * resolve.CLOUD_SYNC_UPLOAD_IN_QUEUE        == 5
+    * resolve.CLOUD_SYNC_UPLOAD_IN_PROGRESS     == 6
+    * resolve.CLOUD_SYNC_UPLOAD_SUCCESS         == 7
+    * resolve.CLOUD_SYNC_UPLOAD_FAIL            == 8
+    * resolve.CLOUD_SYNC_UPLOAD_NOT_FOUND       == 9
+
+    * resolve.CLOUD_SYNC_SUCCESS                == 10
+
+    Audio Mapping
+    ---------------
+    This section covers the output for mpItem.GetAudioMapping() and timelineItem.GetSourceAudioChannelMapping()
+    Mapping format (json result) is similar for mpItem and timelineItem.
+
+    This section will follow an example of an mpItem that has audio from its embedded source, and from two other clips that are linked to it.
+    The audio clip attributes of this mpItem will show 3 tracks.
+
+    Assume that (A) the embedded track is of format/type 'stereo' (2 channels),
+                (B) linked clip 1 track is of format/type '7.1' (8 channels),
+                (C) linked clip 2 track is '5.1' (6 channels)
+    and assume that the format/type was not changed further.
+
+    mpItem.GetAudioMapping() returns a string of the form:
+        {
+          "embedded_audio_channels": 2,                 # Total number of embedded channels across all tracks
+          "linked_audio": {                             # A list of only linked audio information
+            "1": {                                      # Same as (B) above
+              "channels": 8,
+              "path": FILE_PATH
+            },
+            "2": {                                      # Same as (C) above
+              "channels": 6,
+              "path": FILE_PATH
+            }
+          },
+          "track_mapping": {                            # Listing of all the tracks. Output here will match what is seen in the audio clip attributes menu on the UI.
+            "1": {
+              "channel_idx": [1, 3],                    # In this case, channel index '1' corresponds to first channel of (A), channel index '3' will correspond to the first channel of (B)
+              "mute": true,                             # Mute 'true' indicates track is muted. Valid value is true/false.
+              "type": "Stereo"                          # The length of the 'channel_idx' list will always correspond to the number of channels the format specified in 'type' will allow.
+                                                        # In this case, 'Stereo' allows 2 channels and so the length of the 'channel_idx' list is 2.
+            },
+            "2": {
+              "channel_idx": [3, 4, 5, 6, 7, 8, 9, 10], # Channel indices here are following the default for (B)
+              "mute": true,
+              "type": "7.1"
+            },
+            "3": {
+              "channel_idx": [1, 1, 1, 1, 15, 16],      # The first four channels for this track correspond to the first channel of (A), and the final 2 follow the default for (C)
+              "mute": false,
+              "type": "5.1"
+            }
+          }
+        }
+
+
     Auto Caption Settings
     ----------------------
     This section covers the supported settings for the method Timeline.CreateSubtitlesFromAudio({autoCaptionSettings})
@@ -750,6 +818,23 @@ class Resolve:
     CLOUD_SYNC_NONE: Final
     CLOUD_SYNC_PROXY_ONLY: Final
     CLOUD_SYNC_PROXY_AND_ORIG: Final
+
+    CLOUD_SYNC_DEFAULT: -1
+    CLOUD_SYNC_DOWNLOAD_IN_QUEUE: 0
+    CLOUD_SYNC_DOWNLOAD_IN_PROGRESS: 1
+    CLOUD_SYNC_DOWNLOAD_SUCCESS: 2
+    CLOUD_SYNC_DOWNLOAD_FAIL: 3
+    CLOUD_SYNC_DOWNLOAD_NOT_FOUND: 4
+
+    CLOUD_SYNC_UPLOAD_IN_QUEUE: 5
+    CLOUD_SYNC_UPLOAD_IN_PROGRESS: 6
+    CLOUD_SYNC_UPLOAD_SUCCESS: 7
+    CLOUD_SYNC_UPLOAD_FAIL: 8
+    CLOUD_SYNC_UPLOAD_NOT_FOUND: 9
+
+    CLOUD_SYNC_SUCCESS: 10
+
+    DLB_BLEND_SHOTS: Final
 
     EXPORT_AAF: Final
     EXPORT_DRT: Final
@@ -1418,8 +1503,8 @@ class MediaPool:
     @overload
     def AppendToTimeline(self, clipInfo: List[MediaPoolClipInfo]) -> [TimelineItem]:
         """
-        Appends list of clipInfos specified as dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int),
-        (optional) "mediaType" (int; 1 - Video only, 2 - Audio only), "trackIndex" (int) and "recordFrame" (int).
+        Appends list of clipInfos specified as dict of "mediaPoolItem", "startFrame" (float/int), "endFrame" (float/int),
+        (optional) "mediaType" (int; 1 - Video only, 2 - Audio only), "trackIndex" (int) and "recordFrame" (float/int).
         Returns the list of appended timelineItems.
         """
         ...
@@ -1436,7 +1521,7 @@ class MediaPool:
 
     @overload
     def CreateTimelineFromClips(self, name: str, clipInfo: List[MediaPoolClipInfo]) -> Timeline:
-        """ Creates new timeline with specified name, appending the list of clipInfos specified as a dict of "mediaPoolItem", "startFrame" (int), "endFrame" (int), "recordFrame" (int). """
+        """ Creates new timeline with specified name, appending the list of clipInfos specified as a dict of "mediaPoolItem", "startFrame" (float/int), "endFrame" (float/int), "recordFrame" (float/int). """
         ...
 
     def ImportTimelineFromFile(self, filePath: str, importOptions: TimelineImportOptions) -> Timeline:
@@ -1537,6 +1622,14 @@ class MediaPool:
         """ Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool. """
         ...
 
+    def GetSelectedClips(self) -> List[MediaPoolItem]:
+        """ Returns the current selected MediaPoolItems """
+        ...
+
+    def SetSelectedClip(self, mediaPoolItem: MediaPoolItem) -> bool:
+        """ Sets the selected MediaPoolItem to the given MediaPoolItem """
+        ...
+
 
 class Folder:
 
@@ -1610,6 +1703,23 @@ class MediaPoolItem:
     @overload
     def SetMetadata(self, metadata: dict[str, str]) -> bool:
         """ Sets the item metadata with specified 'metadata' dict. Returns True if successful. """
+        ...
+
+    def GetThirdPartyMetadata(self, metadataType: Optional[str] = None) -> str | dict:
+        """
+        Returns the third party metadata value for the key 'metadataType'.
+        If no argument is specified, a dict of all set third parth metadata properties is returned.
+        """
+        ...
+
+    @overload
+    def SetThirdPartyMetadata(self, metadataType: str, metadataValue: str) -> bool:
+        """ Sets/Add the given third party metadata to metadataValue (string). Returns True if successful. """
+        ...
+
+    @overload
+    def SetThirdPartyMetadata(self, metadata: dict[str, str]) -> bool:
+        """ Sets/Add the item third party metadata with specified 'metadata' dict. Returns True if successful. """
         ...
 
     def GetMediaId(self) -> str:
@@ -1688,7 +1798,7 @@ class MediaPoolItem:
         """ Clears the item color. """
         ...
 
-    def GetClipProperty(self, propertyName: Optional[str]) -> str|dict:
+    def GetClipProperty(self, propertyName: Optional[str]) -> str | dict:
         """
         Returns the property value for the key 'propertyName'.
         If no argument is specified, a dict of all clip properties is returned.
@@ -1723,6 +1833,13 @@ class MediaPoolItem:
         """ Clears audio transcription of the MediaPoolItem. Returns True if successful; False otherwise. """
         ...
 
+    def GetAudioMapping(self) -> str:
+        """
+        Returns a string with MediaPoolItem's audio mapping information.
+        Check 'Audio Mapping' section below for more information.
+        """
+        ...
+
 
 class Timeline:
     
@@ -1754,15 +1871,34 @@ class Timeline:
         """ Returns the number of tracks for the given track type ("audio", "video" or "subtitle"). """
         ...
 
-    def AddTrack(self, trackType: TrackType, optionalSubTrackType: SubTrackType) -> bool:
+    @overload
+    def AddTrack(self, trackType: TrackType, subTrackType: SubTrackType) -> bool:
         """
-        Adds track of trackType ("video", "subtitle", "audio"). Second argument optionalSubTrackType is required for "audio"
-        optionalSubTrackType can be one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"}
+        Adds track of trackType ("video", "subtitle", "audio"). Optional argument subTrackType is used for "audio" trackType.
+        subTrackType can be one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"}
+        """
+        ...
+
+    @overload
+    def AddTrack(self, trackType: TrackType, newTrackOptions: NewTrackOptions) -> bool:
+        """
+        Adds track of trackType ("video", "subtitle", "audio").
+        Optional newTrackOptions = {'audioType': same as subTrackType above, 'index': 1 <= index <= GetTrackCount(trackType))
+        'audiotype' defaults to 'mono' if arg skipped and track type is ‘audio’.
+        'index' if skipped (or if value not in bounds) appends track.
         """
         ...
 
     def DeleteTrack(self, trackType: TrackType, trackIndex: int) -> bool:
         """ Deletes track of trackType ("video", "subtitle", "audio") and given trackIndex. 1 <= trackIndex <= GetTrackCount(trackType). """
+        ...
+
+    def GetTrackSubType(self, trackType: TrackType, trackIndex: int) -> SubTrackType:
+        """
+        Returns an audio track's format.
+        the return value is one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"} and matches the parameters 'subTrackType' and 'audioType' in timeline.AddTrack.
+        returns a blank string for non audio tracks
+        """
         ...
 
     def SetTrackEnable(self, trackType: TrackType, trackIndex: int, Bool: bool) -> bool:
@@ -1995,6 +2131,13 @@ class Timeline:
         """ Returns the timeline's node graph object. """
         ...
 
+    def AnalyzeDolbyVision(self, timelineItems: Optional[List[TimelineItem]], analysisType = None) -> bool:
+        """
+        Analyzes Dolby Vision on clips present on the timeline. Returns True if analysis start is successful; False otherwise.
+        if [timelineItems] is empty, analysis performed on all items. Else, analysis performed on [timelineItems] only.
+        set analysisType to resolve.DLB_BLEND_SHOTS for blend setting.
+        """
+
 
 class TimelineItem:
 
@@ -2002,12 +2145,20 @@ class TimelineItem:
         """ Returns the item name. """
         ...
 
-    def GetDuration(self) -> int:
-        """ Returns the item duration. """
+    def GetDuration(self, subframe_precision: bool) -> int | float:
+        """ Returns the item duration. Returns fractional frames if subframe_precision is True. """
         ...
 
-    def GetEnd(self)  -> int:
-        """ Returns the end frame position on the timeline. """
+    def GetEnd(self, subframe_precision: bool)  -> int | float:
+        """ Returns the end frame position on the timeline. Returns fractional frames if subframe_precision is True. """
+        ...
+
+    def GetSourceEndFrame(self) -> int:
+        """ Returns the end frame position of the media pool clip in the timeline clip. """
+        ...
+
+    def GetSourceEndTime(self) -> float:
+        """ Returns the end time position of the media pool clip in the timeline clip. """
         ...
 
     def GetFusionCompCount(self) -> int:
@@ -2035,16 +2186,24 @@ class TimelineItem:
         """ Returns the Fusion composition object based on given name. """
         ...
 
-    def GetLeftOffset(self) -> int:
-        """ Returns the maximum extension by frame for clip from left side. """
+    def GetLeftOffset(self, subframe_precision: bool) -> int | float:
+        """ Returns the maximum extension by frame for clip from left side. Returns fractional frames if subframe_precision is True. """
         ...
 
-    def GetRightOffset(self) -> int:
-        """ Returns the maximum extension by frame for clip from right side. """
+    def GetRightOffset(self, subframe_precision: bool) -> int | float:
+        """ Returns the maximum extension by frame for clip from right side. Returns fractional frames if subframe_precision is True. """
         ...
 
-    def GetStart(self) -> int:
-        """ Returns the start frame position on the timeline. """
+    def GetStart(self, subframe_precision: bool) -> int | float:
+        """ Returns the start frame position on the timeline. Returns fractional frames if subframe_precision is True. """
+        ...
+
+    def GetSourceStartFrame(self) -> int:
+        """ Returns the start frame position of the media pool clip in the timeline clip. """
+        ...
+
+    def GetSourceStartTime(self) -> float:
+        """ Returns the start time position of the media pool clip in the timeline clip. """
         ...
 
     def SetProperty(self, propertyKey: str, propertyValue: Any) -> bool:
@@ -2287,8 +2446,8 @@ class TimelineItem:
 
     def CopyGrades(self, tgtTimelineItems: List[TimelineItem]) -> bool:
         """
-        Copies the current grade to all the items in tgtTimelineItems list.
-        Returns True on success and False if any error occurred.
+        Copies the current node stack layer grade to the same layer for each item in tgtTimelineItems.
+        Returns True if successful.
         """
         ...
 
@@ -2337,8 +2496,11 @@ class TimelineItem:
         """ Performs Smart Reframe. Returns True if successful, False otherwise. """
         ...
 
-    def GetNodeGraph(self) -> Graph:
-        """ Returns the clip's node graph object. """
+    def GetNodeGraph(self, layerIdx: Optional[int]) -> Graph:
+        """
+        Returns the clip's node graph object at layerIdx (int, optional).
+        Returns the first layer if layerIdx is skipped. 1 <= layerIdx <= project.GetSetting("nodeStackLayers").
+        """
         ...
 
     def GetColorGroup(self) -> ColorGroup:
@@ -2361,6 +2523,24 @@ class TimelineItem:
         Exports LUTs from tiItem referring to value passed in 'exportType' (enum) for LUT size. Refer to. 'ExportLUT notes' section for possible values.
         Saves generated LUT in the provided 'path' (string). 'path' should include the intended file name.
         If an empty or incorrect extension is provided, the appropriate extension (.cube/.vlt) will be appended at the end of the path.
+        """
+        ...
+
+    def GetLinkedItems(self) -> List[TimelineItem]:
+        """ Returns a list of linked timeline items. """
+        ...
+
+    def GetTrackTypeAndIndex(self) -> tuple[TrackType, int]:
+        """
+        Returns a list of two values that correspond to the TimelineItem's trackType (string) and trackIndex (int) respectively.
+        trackType is one of {"audio", "video", "subtitle"}
+        1 <= trackIndex <= Timeline.GetTrackCount(trackType)
+        """
+
+    def GetSourceAudioChannelMapping(self) -> str:
+        """
+        Returns a string with TimelineItem's audio mapping information.
+        Check 'Audio Mapping' section below for more information.
         """
         ...
 
@@ -2446,6 +2626,13 @@ class Graph:
 
     def GetToolsInNode(self, nodeIndex: int) -> List[str]:
         """ Returns toolsList (list of strings) of the tools used in the node indicated by given nodeIndex (int). """
+        ...
+
+    def SetNodeEnabled(self, nodeIndex: int, isEnabled: bool) -> bool:
+        """
+        Sets the node at the given nodeIndex (int) to isEnabled (bool).
+        1 <= nodeIndex <= self.GetNumNodes().
+        """
         ...
 
 
