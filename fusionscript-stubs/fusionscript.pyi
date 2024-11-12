@@ -10,6 +10,12 @@ class ValueRange:
     max: int
 
 
+CacheValue = Literal[
+    Resolve.CACHE_AUTO_ENABLED,
+    Resolve.CACHE_DISABLED,
+    Resolve.CACHE_ENABLED,
+]
+
 ColorSet1 = Literal['Orange', 'Apricot', 'Yellow', 'Lime', 'Olive', 'Green', 'Teal', 'Navy', 'Blue', 'Purple', 'Violet', 'Pink', 'Tan', 'Beige', 'Brown', 'Chocolate']
 ColorSet2 = Literal['Blue', 'Cyan', 'Green', 'Yellow', 'Red', 'Pink', 'Purple', 'Fuchsia', 'Rose', 'Lavender', 'Sky', 'Mint', 'Lemon', 'Sand', 'Cocoa', 'Cream']
 
@@ -38,6 +44,8 @@ LUTExportType = Literal[
 MagicMaskMode = Literal['F', 'B', 'BI']
 """ 'F' - forward, 'B' - backward, 'BI' - bidirection """
 
+MarkInOutType = Literal['video', 'audio', 'all']
+
 MediaType = Literal[1, 2]
 """ 1 - Video only, 2 - Audio only """
 
@@ -51,7 +59,7 @@ StereoEye = Literal['left', 'right']
 StillFrameSource = Literal[1, 2]
 """ 1 - First frame, 2 - Middle frame """
 
-SubTrackType = Literal['mono', 'stereo', '5.1', '5.1film', '7.1', '7.1film'] + ['adaptive{number}'.format(number) for number in range(1, 24)]
+SubTrackType = Literal['mono', 'stereo', 'lrc', 'lcr', 'lrcs', 'lcrs', 'quad', '5.0', '5.0film', '5.1', '5.1film', '7.1', '7.1film'] + ['adaptive{number}'.format(number) for number in range(1, 36)]
 
 TimelineExportType = Literal[
     Resolve.EXPORT_AAF,
@@ -89,6 +97,13 @@ UniqueFilenameStyle = Literal[0, 1]
 
 VersionType = Literal[0, 1]
 """ 0 - Local, 1 - Remote """
+
+AudioSyncSettings = TypedDict('AudioSyncSettings', {
+    Resolve.AUDIO_SYNC_MODE: Literal[Resolve.AUDIO_SYNC_WAVEFORM, Resolve.AUDIO_SYNC_TIMECODE],
+    Resolve.AUDIO_SYNC_CHANNEL_NUMBER: int,
+    Resolve.AUDIO_SYNC_RETAIN_EMBEDDED_AUDIO: bool,
+    Resolve.AUDIO_SYNC_RETAIN_VIDEO_METADATA: bool,
+})
 
 AutoCaptionSettings = TypedDict('AutoCaptionSettings', {
     Resolve.SUBTITLE_LANGUAGE: Literal[Resolve.AUTO_CAPTION_AUTO, \
@@ -156,6 +171,14 @@ class ImportClipInfo(TypedDict):
     EndIndex: int
 
 
+MarkInOutValues = TypedDict('MarkInOutValues', {'in': int, 'out': int})
+
+class MarkInOutSet(TypedDict):
+    """ example: {'video': {'in': 0, 'out': 134}, 'audio': {'in': 0, 'out': 134}} """
+    video: NotRequired[MarkInOutValues]
+    audio: NotRequired[MarkInOutValues]
+
+
 class Marker(TypedDict):
     color: MarkerColor
     duration: float
@@ -198,6 +221,19 @@ class Preset(TypedDict):
     pass
 
 
+class QuickExportRenderSettings(TypedDict):
+    """ 'EnableUpload' key enables direct upload for supported web presets."""
+    TargetDir: str
+    CustomName: str
+    VideoQuality: str | int
+    EnableUpload: bool
+
+
+class QuickExportJobStatus(TypedDict):
+    """ No documentation available """
+    pass
+
+
 class RenderPreset(TypedDict):
     """ No documentation available """
     pass
@@ -221,6 +257,9 @@ class RenderSettings(TypedDict):
      - 'MultiPassEncode' - Can only be set for H.264.
      - 'AlphaMode' - 0 - Premultiplied, 1 - Straight. Can only be set if "ExportAlpha" is true.
      - 'NetworkOptimization' - Only supported by QuickTime and MP4 formats.
+     - "ClipStartFrame": int
+     - "TimelineStartTimecode": string (example: "01:00:00:00")
+     - "ReplaceExistingFilesInPlace": Bool
     """
     SelectAllFrames: bool
     MarkIn: int
@@ -245,6 +284,9 @@ class RenderSettings(TypedDict):
     MultiPassEncode: bool
     AlphaMode: Literal[0, 1]
     NetworkOptimization: bool
+    ClipStartFrame: int
+    TimelineStartTimecode: str
+    ReplaceExistingFilesInPlace: bool
 
 
 class RenderResolution(TypedDict):
@@ -422,23 +464,58 @@ class Resolve:
 
     Integer values returned by Resolve.GetKeyframeMode() will correspond to the enums above.
 
+    Cache Mode information
+    -------------------------
+    This section covers additional notes for the functions Graph:GetNodeCacheMode(nodeIndex) and Graph:SetNodeCacheMode(nodeIndex, cache_value).
+
+    cache_value is an enumerated integer with one of the following values:
+        - resolve.CACHE_AUTO_ENABLED  = -1
+        - resolve.CACHE_DISABLED      =  0
+        - resolve.CACHE_ENABLED       =  1
+
+    Integer values returned by Graph:GetNodeCacheMode(nodeIndex) will correspond to the enums above.
+
     Cloud Projects Settings
     --------------------------------------
-    This section covers additional notes for the functions "ProjectManager:CreateCloudProject," "ProjectManager:ImportCloudProject," and "ProjectManager:RestoreCloudProject"
+    This section covers additional notes for the functions "ProjectManager:LoadCloudProject", "ProjectManager:CreateCloudProject", "ProjectManager:ImportCloudProject", and "ProjectManager:RestoreCloudProject"
 
-    All three functions take in a {cloudSettings} dict, that have the following keys:
+    All four functions "ProjectManager:CreateCloudProject", "ProjectManager:LoadCloudProject", "ProjectManager:ImportCloudProject", and "ProjectManager:RestoreCloudProject" take in a {cloudSettings} dict, that have the following keys:
     * resolve.CLOUD_SETTING_PROJECT_NAME: String, ["" by default]
     * resolve.CLOUD_SETTING_PROJECT_MEDIA_PATH: String, ["" by default]
     * resolve.CLOUD_SETTING_IS_COLLAB: Bool, [False by default]
     * resolve.CLOUD_SETTING_SYNC_MODE: syncMode (see below), [resolve.CLOUD_SYNC_PROXY_ONLY by default]
     * resolve.CLOUD_SETTING_IS_CAMERA_ACCESS: Bool [False by default]
 
+    Note that "ProjectManager:LoadCloudProject" only honour the following keys: resolve.CLOUD_SETTING_PROJECT_NAME, resolve.CLOUD_SETTING_PROJECT_MEDIA_PATH and resolve.CLOUD_SETTING_SYNC_MODE.
+    Only 1st load on a given system will honour all 3 settings. Subsequent loads will honour only resolve.CLOUD_SETTING_PROJECT_NAME
+
     Where syncMode is one of the following values:
     * resolve.CLOUD_SYNC_NONE,
     * resolve.CLOUD_SYNC_PROXY_ONLY,
     * resolve.CLOUD_SYNC_PROXY_AND_ORIG
 
-    All three "ProjectManager:CreateCloudProject," "ProjectManager:ImportCloudProject," and "ProjectManager:RestoreCloudProject" require resolve.PROJECT_MEDIA_PATH to be defined. "ProjectManager:CreateCloudProject" also requires resolve.PROJECT_NAME to be defined.
+    All four functions "ProjectManager:CreateCloudProject", "ProjectManager:LoadCloudProject", "ProjectManager:ImportCloudProject", and "ProjectManager:RestoreCloudProject" require resolve.PROJECT_MEDIA_PATH to be defined.
+    "ProjectManager:LoadCloudProject" and "ProjectManager:CreateCloudProject" also requires resolve.PROJECT_NAME to be defined.
+
+    Audio Sync Settings
+    ---------------------
+    This section covers additional notes for the functions "MediaPool:AutoSyncAudio".
+
+    AutoSyncAudio takes in a {audioSyncSettings} dict, that has the following keys:
+    * resolve.AUDIO_SYNC_MODE:                  audioSyncMode (see below),  [resolve.AUDIO_SYNC_TIMECODE by default]
+    * resolve.AUDIO_SYNC_CHANNEL_NUMBER:        channelNumber (see below)   [1 by default]
+    * resolve.AUDIO_SYNC_RETAIN_EMBEDDED_AUDIO: Bool,                       [False by default]
+    * resolve.AUDIO_SYNC_RETAIN_VIDEO_METADATA: Bool,                       [False by default]
+
+    audioSyncMode can be one of the following:
+    * resolve.AUDIO_SYNC_WAVEFORM
+    * resolve.AUDIO_SYNC_TIMECODE
+
+    With AUDIO_SYNC_WAVEFORM mode, channelNumber is used to determine channel offset for comparison.
+    channelNumber can be one of the following:
+    * resolve.AUDIO_SYNC_CHANNEL_AUTOMATIC    = -1
+    * resolve.AUDIO_SYNC_CHANNEL_MIX          = -2
+    * an actual channel offset from input media for waveform comparison. 1 <= channel offset <= channelMax, where channelMax is the channel count of the audio clip in [MediaPoolItems] with the fewest channels.
 
     Looking up Project and Clip properties
     --------------------------------------
@@ -514,10 +591,12 @@ class Resolve:
           "linked_audio": {                             # A list of only linked audio information
             "1": {                                      # Same as (B) above
               "channels": 8,
+              "offset": -100,                           # Audio at media offset 0 plays file_start + 100th sample
               "path": FILE_PATH
             },
             "2": {                                      # Same as (C) above
               "channels": 6,
+              "offset": 200,                            # Audio at media start plays 200 samples of digital black then file_start + 0th audio sample
               "path": FILE_PATH
             }
           },
@@ -555,8 +634,8 @@ class Resolve:
 
     Note that the default values for some keys may change based on values defined for other keys, as per the UI.
     For example, if the following dictionary is supplied,
-        CreateSubtitlesFromAudio( { resolve.SUBTITLE_LANGUAGE = resolve.AUTO_CAPTION_KOREAN,
-                                    resolve.SUBTITLE_CAPTION_PRESET = resolve.AUTO_CAPTION_NETFLIX } )
+        { resolve.SUBTITLE_LANGUAGE = resolve.AUTO_CAPTION_KOREAN,
+          resolve.SUBTITLE_CAPTION_PRESET = resolve.AUTO_CAPTION_NETFLIX }
     the default value for resolve.SUBTITLE_CHARS_PER_LINE will be 16 instead of 42
 
     languageIDs:
@@ -618,6 +697,9 @@ class Resolve:
         - "MultiPassEncode": Bool. Can only be set for H.264.
         - "AlphaMode": 0 - Premultiplied, 1 - Straight. Can only be set if "ExportAlpha" is true.
         - "NetworkOptimization": Bool. Only supported by QuickTime and MP4 formats.
+        - "ClipStartFrame": int
+        - "TimelineStartTimecode": string (example: "01:00:00:00")
+        - "ReplaceExistingFilesInPlace": Bool
 
     Looking up timeline export properties
     -------------------------------------
@@ -809,6 +891,10 @@ class Resolve:
     KEYFRAME_MODE_COLOR: 1
     KEYFRAME_MODE_SIZING: 2
 
+    CACHE_AUTO_ENABLED = -1
+    CACHE_DISABLED = 0
+    CACHE_ENABLED = 1
+
     CLOUD_SETTING_PROJECT_NAME: Final
     CLOUD_SETTING_PROJECT_MEDIA_PATH: Final
     CLOUD_SETTING_IS_COLLAB: Final
@@ -818,6 +904,17 @@ class Resolve:
     CLOUD_SYNC_NONE: Final
     CLOUD_SYNC_PROXY_ONLY: Final
     CLOUD_SYNC_PROXY_AND_ORIG: Final
+
+    AUDIO_SYNC_MODE: Final
+    AUDIO_SYNC_CHANNEL_NUMBER: Final
+    AUDIO_SYNC_RETAIN_EMBEDDED_AUDIO: Final
+    AUDIO_SYNC_RETAIN_VIDEO_METADATA: Final
+
+    AUDIO_SYNC_WAVEFORM: Final
+    AUDIO_SYNC_TIMECODE: Final
+
+    AUDIO_SYNC_CHANNEL_AUTOMATIC: -1
+    AUDIO_SYNC_CHANNEL_MIX: -2
 
     CLOUD_SYNC_DEFAULT: -1
     CLOUD_SYNC_DOWNLOAD_IN_QUEUE: 0
@@ -1081,6 +1178,13 @@ class ProjectManager:
         """
         ...
 
+    def LoadCloudProject(self, cloudSettings: CloudProjectsSettings) -> Project:
+        """
+        Loads and returns a cloud project with the following cloud settings if there is a match found, and None if there is no matching cloud project.
+        '{cloudSettings}': Check 'Cloud Projects Settings' subsection below for more information.
+        """
+        ...
+
     def ImportCloudProject(self, filePath: str, cloudSettings: CloudProjectsSettings) -> bool:
         """
         Returns True if import cloud project is successful; False otherwise
@@ -1256,6 +1360,10 @@ class Project:
         """ Creates new render preset by given name if presetName(string) is unique. """
         ...
 
+    def DeleteRenderPreset(self, presetName: str) -> bool:
+        """ Delete render preset by provided name. """
+        ...
+
     def SetRenderSettings(self, settings: RenderSettings) -> bool:
         """
         Sets given settings for rendering. Settings is a dict, with support for the keys:
@@ -1272,6 +1380,21 @@ class Project:
     @overload
     def GetRenderJobStatus(self, idx: int) -> RenderJobStatus:
         """ Returns a dict with job status and completion percentage of the job by given jobId (string). """
+        ...
+
+    def GetQuickExportRenderPresets(self) -> List[str]:
+        """ Returns a list of Quick Export render presets by name. """
+        ...
+
+    def RenderWithQuickExport(self, preset_name: str, param_dict: QuickExportRenderSettings) -> QuickExportJobStatus | str:
+        """
+        Starts a quick export render for the current active timeline.
+        preset_name from GetQuickExportRenderPresets list.
+        param_dict supports render settings keys "TargetDir", "CustomName", "VideoQuality", and "EnableUpload".
+        "EnableUpload" key enables direct upload for supported web presets.
+        Returns a dict with job status and time taken to render, or an error string if render has failed or not attempted
+        Refer to "Looking up Render Settings" section for information on the above supported settings.
+        """
         ...
 
     def GetSetting(self, settingName: str) -> str:
@@ -1346,7 +1469,7 @@ class Project:
     def ExportCurrentFrameAsStill(self, filePath: str) -> bool:
         """
         Exports current frame as still to supplied filePath. filePath must end in valid export file format.
-        Returns True if succssful, False otherwise.
+        Returns True if successful, False otherwise.
         """
 
     def GetColorGroupsList(self) -> List[ColorGroup]:
@@ -1622,6 +1745,13 @@ class MediaPool:
         """ Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool. """
         ...
 
+    def AutoSyncAudio(self, MediaPoolItems: List[MediaPoolItem], audioSyncSettings: AudioSyncSettings) -> bool:
+        """
+        Syncs audio for specified [MediaPoolItems] (list). The list must contain a minimum of two MediaPoolItems - at least one video and one audio clip.
+        Returns True if successful. Refer to 'Audio Sync Settings' section for details.
+        """
+        ...
+
     def GetSelectedClips(self) -> List[MediaPoolItem]:
         """ Returns the current selected MediaPoolItems """
         ...
@@ -1708,7 +1838,7 @@ class MediaPoolItem:
     def GetThirdPartyMetadata(self, metadataType: Optional[str] = None) -> str | dict:
         """
         Returns the third party metadata value for the key 'metadataType'.
-        If no argument is specified, a dict of all set third parth metadata properties is returned.
+        If no argument is specified, a dict of all set third party metadata properties is returned.
         """
         ...
 
@@ -1840,6 +1970,21 @@ class MediaPoolItem:
         """
         ...
 
+    def GetMarkInOut(self) -> MarkInOutSet:
+        """
+        Returns dict of in/out marks set (keys omitted if not set), example:
+        {'video': {'in': 0, 'out': 134}, 'audio': {'in': 0, 'out': 134}}
+        """
+        ...
+
+    def SetMarkInOut(self, mark_in: int, mark_out: int, type: MarkInOutType = 'all') -> bool:
+        """ Sets mark in/out of type "video", "audio" or "all" (default). """
+        ...
+
+    def ClearMarkInOut(self, type: MarkInOutType = 'all') -> bool:
+        """ Clears mark in/out of type "video", "audio" or "all" (default). """
+        ...
+
 
 class Timeline:
     
@@ -1875,7 +2020,7 @@ class Timeline:
     def AddTrack(self, trackType: TrackType, subTrackType: SubTrackType) -> bool:
         """
         Adds track of trackType ("video", "subtitle", "audio"). Optional argument subTrackType is used for "audio" trackType.
-        subTrackType can be one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"}
+        subTrackType can be one of {"mono", "stereo", lrc, lcr, lrcs, lcrs, quad, "5.0", "5.0film", "5.1", "5.1film", "7.0", "7.0film" ,"7.1", "7.1film", "adaptive1", ... , "adaptive36"}
         """
         ...
 
@@ -1896,7 +2041,8 @@ class Timeline:
     def GetTrackSubType(self, trackType: TrackType, trackIndex: int) -> SubTrackType:
         """
         Returns an audio track's format.
-        the return value is one of {"mono", "stereo", "5.1", "5.1film", "7.1", "7.1film", "adaptive1", ... , "adaptive24"} and matches the parameters 'subTrackType' and 'audioType' in timeline.AddTrack.
+        the return value is one of {"mono", "stereo", lrc, lcr, lrcs, lcrs, quad, "5.0", "5.0film", "5.1", "5.1film", "7.0", "7.0film" ,"7.1", "7.1film", "adaptive1", ... , "adaptive36"}
+        and matches the parameters 'subTrackType' and 'audioType' in timeline.AddTrack.
         returns a blank string for non audio tracks
         """
         ...
@@ -1989,17 +2135,7 @@ class Timeline:
     def DeleteMarkerByCustomData(self, customData: str) -> bool:
         """ Delete first matching marker with specified customData. """
         ...
-    
-    @overload
-    def ApplyGradeFromDRX(self, path: str, gradeMode: GradeMode, item1: TimelineItem, *args: TimelineItem) -> bool:
-        """ Loads a still from given file path (string) and applies grade to Timeline Items with gradeMode (int): 0 - "No keyframes", 1 - "Source Timecode aligned", 2 - "Start Frames aligned". """
-        ...
-    
-    @overload
-    def ApplyGradeFromDRX(self, path: str, gradeMode: GradeMode, items: List[TimelineItem]) -> bool:
-        """ Loads a still from given file path (string) and applies grade to Timeline Items with gradeMode (int): 0 - "No keyframes", 1 - "Source Timecode aligned", 2 - "Start Frames aligned". """
-        ...
-    
+
     def GetCurrentTimecode(self) -> str:
         """ Returns a string timecode representation for the current playhead position, while on Cut, Edit, Color, Fairlight and Deliver pages. """
         ...
@@ -2137,6 +2273,25 @@ class Timeline:
         if [timelineItems] is empty, analysis performed on all items. Else, analysis performed on [timelineItems] only.
         set analysisType to resolve.DLB_BLEND_SHOTS for blend setting.
         """
+
+    def GetMediaPoolItem(self) -> MediaPoolItem:
+        """ Returns the media pool item corresponding to the timeline """
+        ...
+
+    def GetMarkInOut(self) -> MarkInOutSet:
+        """
+        Returns dict of in/out marks set (keys omitted if not set), example:
+        {'video': {'in': 0, 'out': 134}, 'audio': {'in': 0, 'out': 134}}
+        """
+        ...
+
+    def SetMarkInOut(self, mark_in: int, mark_out: int, type: MarkInOutType = 'all') -> bool:
+        """ Sets mark in/out of type "video", "audio" or "all" (default). """
+        ...
+
+    def ClearMarkInOut(self, type: MarkInOutType = 'all') -> bool:
+        """ Clears mark in/out of type "video", "audio" or "all" (default). """
+        ...
 
 
 class TimelineItem:
@@ -2382,10 +2537,6 @@ class TimelineItem:
         """
         ...
 
-    def ApplyArriCdlLut(self) -> bool:
-        """ Applies ARRI CDL and LUT. Returns True if successful, False otherwise. """
-        ...
-
     @deprecated
     def SetLUT(self, nodeIndex: int, lutPath: str) -> bool:
         """
@@ -2544,6 +2695,23 @@ class TimelineItem:
         """
         ...
 
+    def GetIsColorOutputCacheEnabled(self) -> CacheValue:
+        """ Returns if the cache corresponding to cache_type is enabled """
+        ...
+
+    def GetIsFusionOutputCacheEnabled(self) -> CacheValue:
+        """ Returns if the cache corresponding to cache_type is enabled (or auto) """
+        ...
+
+    def SetColorOutputCache(self, cache_value: CacheValue) -> bool:
+        """ Sets caching to enabled or disabled. Equivalent to clip context menu action 'Render Cache Color Output'. """
+        ...
+
+    def SetFusionOutputCache(self, cache_value: CacheValue) -> bool:
+        """ Sets caching to auto, enabled or disabled. Equivalent to clip context menu action 'Render Cache Fusion Output'. """
+        ...
+
+
 
 class Gallery:
 
@@ -2565,6 +2733,18 @@ class Gallery:
 
     def GetGalleryStillAlbums(self) -> List[GalleryStillAlbum]:
         """ Returns the gallery albums as a list of GalleryStillAlbum objects. """
+        ...
+
+    def GetGalleryPowerGradeAlbums(self) -> List[GalleryStillAlbum]:
+        """ Returns the gallery PowerGrade albums as a list of GalleryStillAlbum objects. """
+        ...
+
+    def CreateGalleryStillAlbum(self) -> GalleryStillAlbum | None:
+        """ Returns a newly created Still album (GalleryStillAlbum object), or None if not successful. """
+        ...
+
+    def CreateGalleryPowerGradeAlbum(self) -> GalleryStillAlbum | None:
+        """ Returns a newly created PowerGrade album (GalleryStillAlbum object), or None if not successful. """
         ...
 
 
@@ -2620,6 +2800,17 @@ class Graph:
         """ Gets relative LUT path based on the node index provided, 1 <= nodeIndex <= total number of nodes. """
         ...
 
+    def SetNodeCacheMode(self, nodeIndex: int, cache_value: CacheValue) -> bool:
+        """
+        Sets the cache mode type on the node mapping the node index provided.
+        Refer to "Cache Mode" section below to find the possible values of cache_value.
+        """
+        ...
+
+    def GetNodeCacheMode(self, nodeIndex: int) -> CacheValue:
+        """ Returns the cache mode type on the node mapping the node index provided. """
+        ...
+
     def GetNodeLabel(self, nodeIndex: int) -> str:
         """ Returns the label of the node at nodeIndex. """
         ...
@@ -2633,6 +2824,20 @@ class Graph:
         Sets the node at the given nodeIndex (int) to isEnabled (bool).
         1 <= nodeIndex <= self.GetNumNodes().
         """
+        ...
+
+    def ApplyGradeFromDRX(self, path: str, gradeMode: GradeMode) -> bool:
+        """
+        Loads a still from given file path (string) and applies grade to graph with gradeMode (int): 0 - “No keyframes”, 1 - “Source Timecode aligned”, 2 - “Start Frames aligned”.
+        """
+        ...
+
+    def ApplyArriCdlLut(self) -> bool:
+        """ Applies ARRI CDL and LUT. Returns True if successful, False otherwise. """
+        ...
+
+    def ResetAllGrades(self) -> bool:
+        """ Returns True if all grades were reset successfully, False otherwise."""
         ...
 
 

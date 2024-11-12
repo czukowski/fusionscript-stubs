@@ -92,8 +92,10 @@ from .fusionscript import (
 
 # Literal values
 from .fusionscript import (
+    CacheValue as CacheValue,
     ClipColor as ClipColor,
     FlagColor as FlagColor,
+    MarkInOutType as MarkInOutType,
     MarkerColor as MarkerColor,
     GalleryStillExportFormat as GalleryStillExportFormat,
     GradeMode as GradeMode,
@@ -112,6 +114,7 @@ from .fusionscript import (
 
 # Typed dicts
 from .fusionscript import (
+    AudioSyncSettings as AudioSyncSettings,
     AutoCaptionSettings as AutoCaptionSettings,
     CDLMap as CDLMap,
     CloudProjectsSettings as CloudProjectsSettings,
@@ -121,6 +124,8 @@ from .fusionscript import (
     Marker as Marker,
     MediaPoolClipInfo as MediaPoolClipInfo,
     Preset as Preset,
+    QuickExportJobStatus as QuickExportJobStatus,
+    QuickExportRenderSettings as QuickExportRenderSettings,
     RenderPreset as RenderPreset,
     RenderSettings as RenderSettings,
     RenderResolution as RenderResolution,
