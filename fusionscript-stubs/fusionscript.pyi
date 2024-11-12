@@ -1618,7 +1618,7 @@ class MediaPool:
         """ Returns a unique ID for the media pool """
         ...
 
-    def CreateStereoClip(str, LeftMediaPoolItem: MediaPoolItem, RightMediaPoolItem: MediaPoolItem) -> MediaPoolItem:
+    def CreateStereoClip(self, LeftMediaPoolItem: MediaPoolItem, RightMediaPoolItem: MediaPoolItem) -> MediaPoolItem:
         """ Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool. """
         ...
 
