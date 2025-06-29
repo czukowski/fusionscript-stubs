@@ -12,5 +12,7 @@ setup(
     author_email="carbofos@seznam.cz",
     version="20.0",
     package_data={"fusionscript-stubs": ['fusionscript.pyi', '__init__.pyi']},
-    packages=["fusionscript-stubs"]
+    packages=["fusionscript-stubs"],
+    license='MIT',
+    license_file=[],
 )
