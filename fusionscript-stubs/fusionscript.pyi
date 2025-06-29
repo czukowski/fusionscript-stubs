@@ -1943,12 +1943,20 @@ class MediaPoolItem:
         """ Links proxy media located at path specified by arg 'proxyMediaFilePath' with the current clip. 'proxyMediaFilePath' should be absolute clip path. """
         ...
 
+    def LinkFullResolutionMedia(self, fullResMediaPath: str) -> bool:
+        """ Links proxy media to full resolution media files specified via its path. """
+        ...
+
     def UnlinkProxyMedia(self) -> bool:
         """ Unlinks any proxy media associated with clip. """
         ...
 
     def ReplaceClip(self, filePath: str) -> bool:
         """ Replaces the underlying asset and metadata of MediaPoolItem with the specified absolute clip path. """
+        ...
+
+    def ReplaceClipPreserveSubClip(self, filePath: str) -> bool:
+        """ Replaces the underlying asset and metadata of a video or audio clip with the specified absolute clip path, preserving original sub clip extents. """
         ...
 
     def GetUniqueId(self) -> str:
@@ -1983,6 +1991,10 @@ class MediaPoolItem:
 
     def ClearMarkInOut(self, type: MarkInOutType = 'all') -> bool:
         """ Clears mark in/out of type "video", "audio" or "all" (default). """
+        ...
+
+    def MonitorGrowingFile(self) -> bool:
+        """ Monitor a file as long as it keeps growing (stops if the file does not grow for some time). """
         ...
 
 
