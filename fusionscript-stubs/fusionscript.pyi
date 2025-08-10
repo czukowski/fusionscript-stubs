@@ -370,6 +370,12 @@ class TimelineItemsImportOptions(TypedDict):
     sourceClipsFolders: NotRequired[str]
 
 
+class VoiceIsolationState(TypedDict):
+    """ Amount is in range of [0, 100] """
+    isEnabled: bool
+    amount: int
+
+
 DYNAMIC_ZOOM_EASE_LINEAR: Final = 0
 DYNAMIC_ZOOM_EASE_IN: Final
 DYNAMIC_ZOOM_EASE_OUT: Final
@@ -2305,6 +2311,17 @@ class Timeline:
         """ Clears mark in/out of type "video", "audio" or "all" (default). """
         ...
 
+    def GetVoiceIsolationState(self, trackIndex: int) -> VoiceIsolationState:
+        """ Returns the Voice Isolation State as a dict {isEnabled, amount}, of the given track index """
+        ...
+
+    def SetVoiceIsolationState(self, trackIndex: int, voiceIsolationState: VoiceIsolationState) -> bool:
+        """
+        Sets Voice Isolation state of audio track with given trackIndex (int) to the given VoiceIsolationState of {isEnabled (bool), amount (int)}.
+        Amount is in range of [0, 100] and 1 <= trackIndex <= GetTrackCount("audio"). Returns True if successful.
+        """
+        ...
+
 
 class TimelineItem:
 
@@ -2723,6 +2740,16 @@ class TimelineItem:
         """ Sets caching to auto, enabled or disabled. Equivalent to clip context menu action 'Render Cache Fusion Output'. """
         ...
 
+    def GetVoiceIsolationState(self) -> VoiceIsolationState:
+        """ Returns the Voice Isolation State as a dict {isEnabled, amount}, of the timelineItem. """
+        ...
+
+    def SetVoiceIsolationState(self, voiceIsolationState: VoiceIsolationState) -> bool:
+        """
+        Sets Voice Isolation state of the timelineItem to the given VoiceIsolationState of {isEnabled (bool), amount (int)}.
+        Amount is in range of [0, 100]. Returns True if successful.
+        """
+        ...
 
 
 class Gallery:
