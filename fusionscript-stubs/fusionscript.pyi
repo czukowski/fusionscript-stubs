@@ -260,6 +260,8 @@ class RenderSettings(TypedDict):
      - "ClipStartFrame": int
      - "TimelineStartTimecode": string (example: "01:00:00:00")
      - "ReplaceExistingFilesInPlace": Bool
+     - "ExportSubtitle": Bool
+     - "SubtitleFormat": string (options: "BurnIn", "EmbeddedCaptions", "SeparateFile")
     """
     SelectAllFrames: bool
     MarkIn: int
@@ -287,6 +289,8 @@ class RenderSettings(TypedDict):
     ClipStartFrame: int
     TimelineStartTimecode: str
     ReplaceExistingFilesInPlace: bool
+    ExportSubtitle: bool
+    SubtitleFormat: Literal['BurnIn', 'EmbeddedCaptions', 'SeparateFile']
 
 
 class RenderResolution(TypedDict):
@@ -1824,6 +1828,10 @@ class MediaPoolItem:
         """ Returns the clip name. """
         ...
 
+    def SetName(self, name: str) -> bool:
+        """ Sets the clip's name to name(string). Returns True if successful """
+        ...
+
     def GetMetadata(self, metadataType: Optional[str]) -> str | dict:
         """
         Returns the metadata value for the key 'metadataType'.
@@ -2329,6 +2337,10 @@ class TimelineItem:
         """ Returns the item name. """
         ...
 
+    def SetName(self, name: str) -> bool:
+        """ Sets the clip's name to name(string). Returns True if successful """
+        ...
+
     def GetDuration(self, subframe_precision: bool) -> int | float:
         """ Returns the item duration. Returns fractional frames if subframe_precision is True. """
         ...
@@ -2749,6 +2761,10 @@ class TimelineItem:
         Sets Voice Isolation state of the timelineItem to the given VoiceIsolationState of {isEnabled (bool), amount (int)}.
         Amount is in range of [0, 100]. Returns True if successful.
         """
+        ...
+
+    def ResetAllNodeColors(self) -> bool:
+        """ Reset node color for all nodes in the active version of the clip. Returns True if successful. """
         ...
 
 
