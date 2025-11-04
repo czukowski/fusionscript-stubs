@@ -1076,6 +1076,10 @@ class Resolve:
         """
         ...
 
+    def GetFairlightPresets(self) -> List[str]:
+        """ Returns a list of Fairlight presets by name """
+        ...
+
 
 class ProjectManager:
 
@@ -1083,8 +1087,11 @@ class ProjectManager:
         """ Archives project to provided file path with the configuration as provided by the optional arguments"""
         ...
 
-    def CreateProject(self, projectName: str) -> Project | None:
-        """ Creates and returns a project if projectName (string) is unique, and None if it is not. """
+    def CreateProject(self, projectName: str, mediaLocationPath: Optional[str]) -> Project | None:
+        """
+        Creates and returns a project if projectName (string) is unique, and None if it is not.
+        Accepts an optional argument to set the media location path.
+        """
         ...
 
     def DeleteProject(self, projectName: str) -> bool:
@@ -1492,6 +1499,10 @@ class Project:
 
     def DeleteColorGroup(self, colorGroup: ColorGroup) -> bool:
         """ Deletes the given color group and sets clips to ungrouped. """
+        ...
+
+    def ApplyFairlightPresetToCurrentTimeline(self, name: str) -> bool:
+        """ Apply Fairlight Preset of given name to the current timeline, returns True if successful, False otherwise. """
         ...
 
 

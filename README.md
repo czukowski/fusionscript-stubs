@@ -46,4 +46,4 @@ with the corresponding DaVinci Resolve version and is based on the documentation
 (scripting README.txt) shipped with that version. The patch version number is incremental
 and does not correspond to DaVinci Resolve releases.
 
-The current stubs are based on the documentation marked as "Last Updated: 18 Aug 2025".
+The current stubs are based on the documentation marked as "Last Updated: 7 Oct 2025".
