@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Final, List, NotRequired, Optional, TypedDict
+from typing import Annotated, Any, Final, List, NotRequired, Optional, Tuple, TypedDict
 from typing import overload
 from typing_extensions import Literal
 from dataclasses import dataclass
@@ -158,6 +158,28 @@ class DbInfo(TypedDict):
     IpAddress: NotRequired[str]
 
 
+class DeblurOption(TypedDict):
+    """
+    Keys:
+     - 'FileName': string
+     - 'Format': string (example: "mov", "mp4").
+     - 'Codec': string (example: "H264", "ProRes422")
+     - 'EncodingProfile': string (example: "Main10"). Can only be set for H.264 and H.265.
+     - 'UseExtremeMode': bool
+     - 'UseMarkInMarkOut': bool
+     - 'RenderAtSourceRes': bool
+     - 'UseMoreGpuMemory': bool
+    """
+    FileName: str
+    Format: str
+    Codec: str
+    EncodingProfile: str
+    UseExtremeMode: bool
+    UseMarkInMarkOut: bool
+    RenderAtSourceRes: bool
+    UseMoreGpuMemory: bool
+
+
 class FloatingWindowParams(TypedDict):
     left: Any
     right: Any
@@ -311,6 +333,32 @@ class RenderJob(TypedDict):
 class RenderJobStatus(TypedDict):
     """ No documentation available """
     pass
+
+
+class SpeechGenerationSettings(TypedDict):
+    """
+    Keys:
+     - 'TextInput': string
+     - 'VoiceModel': string (example: "Female 1", "Male 1", "Custom Voice").
+     - 'CustomVoiceFile': string "Full Path of Voice File"
+     - 'Speed': int
+     - 'Variation': int
+     - 'Pitch': int
+     - 'GenerationID': int
+     - 'Filename': string
+     - 'AddToTimeline': bool
+     - 'AudioTrack': int
+    """
+    TextInput: str
+    VoiceModel: str
+    CustomVoiceFile: str
+    Speed: int
+    Variation: int
+    Pitch: int
+    GenerationID: int
+    Filename: str
+    AddToTimeline: bool
+    AudioTrack: int
 
 
 class TakeInfo(TypedDict):
@@ -862,6 +910,38 @@ class Resolve:
 
     Getting the values for the keys that uses constants will return the number which is in the constant
 
+    Studio and AI Scripting APIs
+    ----------------------------
+    The DaVinci Resolve scripting APIs cover a common superset of functions for both the Free and Studio versions of the application.
+
+    API calls can return with a False status (or an appropriate error status) when:
+    * the function references a Studio function from the free DaVinci Resolve version.
+    * the minimum system requirements of the function are not satisfied. To check if your system is capable, invoke the function from the GUI and check for error dialogs.
+    * the requisite Extras have not been downloaded.
+
+    The following functions require one or more Extras downloads:
+    * AnalyzeForIntellisearch(identifyFaces, isBetterMode=False) requires AI IntelliSearch - Faster.
+    * AnalyzeForIntellisearch(identifyFaces, isBetterMode=True) requires AI IntelliSearch - Better.
+    * AnalyzeForSlate(markerColor) requires AI Slate ID.
+    * Transcription workflows with extended language models. Languages from built in models will be used as a fallback if unavailable.
+    * GenerateSpeech({speechGenerationSettings}, timecode) requires AI Speech Generator.
+
+    For a successful API call, the required package will need to be installed before script invocation. Go to the DaVinci Resolve Studio application menu, open the Extras Download Manager and install the required package.
+
+    Motion Deblur Settings
+    -----------------------------------
+    This section covers the supported settings for the method RemoveMotionBlur({deblurOption})
+
+    The deblurOption setting is a dictionary containing the following keys:
+        - "FileName": string
+        - "Format": string (example: "mov", "mp4").
+        - "Codec": string (example: "H264", "ProRes422")
+        - "EncodingProfile": string (example: "Main10"). Can only be set for H.264 and H.265.
+        - "UseExtremeMode": bool
+        - "UseMarkInMarkOut": bool
+        - "RenderAtSourceRes": bool
+        - "UseMoreGpuMemory": bool
+
     ExportLUT notes
     ---------------
     The following section covers additional notes for TimelineItem.ExportLUT(exportType, path).
@@ -871,6 +951,43 @@ class Resolve:
         - resolve.EXPORT_LUT_33PTCUBE
         - resolve.EXPORT_LUT_65PTCUBE
         - resolve.EXPORT_LUT_PANASONICVLUT
+
+    Analyze Slate Settings
+    -----------------------------------
+    This section covers the supported settings for the method AnalyzeForSlate(markerColor)
+    markerColor can be one of the following constants:
+        - resolve.MARKER_BLUE
+        - resolve.MARKER_CYAN
+        - resolve.MARKER_GREEN
+        - resolve.MARKER_YELLOW
+        - resolve.MARKER_RED
+        - resolve.MARKER_PINK
+        - resolve.MARKER_PURPLE
+        - resolve.MARKER_FUCHSIA
+        - resolve.MARKER_ROSE
+        - resolve.MARKER_LAVENDER
+        - resolve.MARKER_SKY
+        - resolve.MARKER_MINT
+        - resolve.MARKER_LEMON
+        - resolve.MARKER_SAND
+        - resolve.MARKER_COCOA
+        - resolve.MARKER_CREAM
+
+    Speech Generation Settings
+    -----------------------------------
+    This section covers the supported settings for the method GenerateSpeech({speechGenerationSettings}, timecode)
+
+    The speechGenerationSettings is a dictionary containing the following keys:
+        - "TextInput": string
+        - "VoiceModel": string (example: "Female 1", "Male 1", "Custom Voice").
+        - "CustomVoiceFile": string "Full Path of Voice File"
+        - "Speed": int
+        - "Variation": int
+        - "Pitch": int
+        - "GenerationID": int
+        - "Filename" : string
+        - "AddToTimeline" : bool
+        - "AudioTrack": int
     """
 
     AUTO_CAPTION_AUTO: Final
@@ -970,6 +1087,23 @@ class Resolve:
     EXPORT_LUT_33PTCUBE: Final
     EXPORT_LUT_65PTCUBE: Final
     EXPORT_LUT_PANASONICVLUT: Final
+
+    MARKER_BLUE: Final
+    MARKER_CYAN: Final
+    MARKER_GREEN: Final
+    MARKER_YELLOW: Final
+    MARKER_RED: Final
+    MARKER_PINK: Final
+    MARKER_PURPLE: Final
+    MARKER_FUCHSIA: Final
+    MARKER_ROSE: Final
+    MARKER_LAVENDER: Final
+    MARKER_SKY: Final
+    MARKER_MINT: Final
+    MARKER_LEMON: Final
+    MARKER_SAND: Final
+    MARKER_COCOA: Final
+    MARKER_CREAM: Final
 
     SUBTITLE_LANGUAGE: Final
     SUBTITLE_CAPTION_PRESET: Final
@@ -1078,6 +1212,10 @@ class Resolve:
 
     def GetFairlightPresets(self) -> List[str]:
         """ Returns a list of Fairlight presets by name """
+        ...
+
+    def DisableBackgroundTasksForCurrentResolveSession(self) -> None:
+        """ Disables all background tasks for current Resolve session. """
         ...
 
 
@@ -1384,7 +1522,7 @@ class Project:
     def SetRenderSettings(self, settings: RenderSettings) -> bool:
         """
         Sets given settings for rendering. Settings is a dict, with support for the keys:
-        Refer to "Looking up render settings" section for information for supported settings
+        Refer to section "Looking up render settings" for information on supported settings
         """
         ...
 
@@ -1410,7 +1548,7 @@ class Project:
         param_dict supports render settings keys "TargetDir", "CustomName", "VideoQuality", and "EnableUpload".
         "EnableUpload" key enables direct upload for supported web presets.
         Returns a dict with job status and time taken to render, or an error string if render has failed or not attempted
-        Refer to "Looking up Render Settings" section for information on the above supported settings.
+        Refer to section "Looking up Render Settings" for information on the above supported settings
         """
         ...
 
@@ -1503,6 +1641,22 @@ class Project:
 
     def ApplyFairlightPresetToCurrentTimeline(self, name: str) -> bool:
         """ Apply Fairlight Preset of given name to the current timeline, returns True if successful, False otherwise. """
+        ...
+
+    def ResetIntellisearchAnalysis(self) -> bool:
+        """
+        Clears Intellisearch analysis data. Returns True if successful.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def GenerateSpeech(self, speechGenerationSettings: SpeechGenerationSettings, timecode: str) -> MediaPoolItem:
+        """
+        Generates an audio MediaPoolItem based on the given speechGenerationSettings and adds it to the timeline at the stated timecode if "AddToTimeline" is True.
+        Returns the newly generated MediaPoolItem.
+        Refer to section "Speech Generation Settings" for information on supported settings
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
 
@@ -1763,7 +1917,10 @@ class MediaPool:
         ...
 
     def CreateStereoClip(self, LeftMediaPoolItem: MediaPoolItem, RightMediaPoolItem: MediaPoolItem) -> MediaPoolItem:
-        """ Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool. """
+        """
+        Takes in two existing media pool items and creates a new 3D stereoscopic media pool entry replacing the input media in the media pool.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def AutoSyncAudio(self, MediaPoolItems: List[MediaPoolItem], audioSyncSettings: AudioSyncSettings) -> bool:
@@ -1824,12 +1981,58 @@ class Folder:
         """ Returns true if export of DRB folder to filePath is successful, false otherwise """
         ...
 
-    def TranscribeAudio(self) -> bool:
-        """ Transcribes audio of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise """
+    def TranscribeAudio(self, useSpeakerDetection: bool = None) -> bool:
+        """
+        Transcribes audio of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise
+        Accepts an optional boolean argument to use speaker detection when transcribing. If no argument is specified, use the project's setting.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def ClearTranscription(self) -> bool:
-        """ Clears audio transcription of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise. """
+        """
+        Clears audio transcription of the MediaPoolItems within the folder and nested folders. Returns True if successful; False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def PerformAudioClassification(self) -> bool:
+        """
+        Analyzes and classifies the audio of the MediaPoolItems within the folder and nested folders into categories and subcategories.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def ClearAudioClassification(self) -> bool:
+        """
+        Clears audio classification of the MediaPoolItems within the folder and nested folders.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def RemoveMotionBlur(self, deblurOption: DeblurOption) -> List[Tuple[MediaPoolItem, MediaPoolItem]]:
+        """
+        Applies motion deblur on MediaPoolItems in the folder. Returns a list of pairs mapping original to newly created MediaPoolItems.
+        Refer to section "Motion Deblur Settings" for information on supported settings
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def AnalyzeForIntellisearch(self, identifyFaces: bool, isBetterMode: bool) -> bool:
+        """
+        Performs Intellisearch analysis on all MediaPoolItems in the folder. identifyFaces specifies whether to identify faces; isBetterMode specifies whether to use Better mode.
+        Returns True if required packages are installed and analysis is successful.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+                                                                             #
+    def AnalyzeForSlate(self, markerColor: MarkerColor) -> bool:
+        """
+        Performs Slate analysis on all MediaPoolItems in the folder using the current settings and specified markerColor.
+        Returns True if required packages are installed and analysis is successful.
+        Refer to section "Analyze Slate Settings" for information on markerColor
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
 
@@ -1988,12 +2191,33 @@ class MediaPoolItem:
         """ Returns a unique ID for the media pool item """
         ...
 
-    def TranscribeAudio(self) -> bool:
-        """ Transcribes audio of the MediaPoolItem. Returns True if successful; False otherwise """
+    def TranscribeAudio(self, useSpeakerDetection: bool = None) -> bool:
+        """
+        Transcribes audio of the MediaPoolItem. Returns True if successful; False otherwise
+        Accepts an optional boolean argument to use speaker detection when transcribing. If no argument is specified, use the project's setting.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def ClearTranscription(self) -> bool:
-        """ Clears audio transcription of the MediaPoolItem. Returns True if successful; False otherwise. """
+        """
+        Clears audio transcription of the MediaPoolItem. Returns True if successful; False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def PerformAudioClassification(self) -> bool:
+        """
+        Analyzes and classifies the audio of a MediaPoolItem into categories and subcategories.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def ClearAudioClassification(self) -> bool:
+        """
+        Clears audio classification of the MediaPoolItem.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def GetAudioMapping(self) -> str:
@@ -2020,6 +2244,30 @@ class MediaPoolItem:
 
     def MonitorGrowingFile(self) -> bool:
         """ Monitor a file as long as it keeps growing (stops if the file does not grow for some time). """
+        ...
+
+    def RemoveMotionBlur(self, deblurOption: DeblurOption) -> MediaPoolItem:
+        """
+        Applies motion deblur on the MediaPoolItem. Returns the newly created MediaPoolItem.
+        Refer to section "Motion Deblur Settings" for information on supported settings.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+        ...
+
+    def AnalyzeForIntellisearch(self, identifyFaces: bool, isBetterMode: bool) -> bool:
+        """
+        Performs Intellisearch analysis on the MediaPoolItem. identifyFaces specifies whether to identify faces; isBetterMode specifies whether to use Better mode.
+        Returns True if required packages are installed and analysis is successful.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
+
+    def AnalyzeForSlate(self, markerColor: MarkerColor) -> bool:
+        """
+        Performs Slate analysis on the MediaPoolItem using the current settings and specified markerColor.
+        Returns True if required packages are installed and analysis is successful.
+        Refer to section "Analyze Slate Settings" for information on markerColor
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
 
@@ -2289,6 +2537,7 @@ class Timeline:
         Creates subtitles from audio for the timeline.
         Takes in optional dictionary {autoCaptionSettings}. Check 'Auto Caption Settings' subsection below for more information.
         Returns True on success, False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
         ...
 
@@ -2297,7 +2546,10 @@ class Timeline:
         ...
 
     def ConvertTimelineToStereo(self) -> bool:
-        """ Converts timeline to stereo. Returns True if successful; False otherwise. """
+        """
+        Converts timeline to stereo. Returns True if successful; False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def GetNodeGraph(self) -> Graph:
@@ -2309,6 +2561,7 @@ class Timeline:
         Analyzes Dolby Vision on clips present on the timeline. Returns True if analysis start is successful; False otherwise.
         if [timelineItems] is empty, analysis performed on all items. Else, analysis performed on [timelineItems] only.
         set analysisType to resolve.DLB_BLEND_SHOTS for blend setting.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
 
     def GetMediaPoolItem(self) -> MediaPoolItem:
@@ -2338,6 +2591,7 @@ class Timeline:
         """
         Sets Voice Isolation state of audio track with given trackIndex (int) to the given VoiceIsolationState of {isEnabled (bool), amount (int)}.
         Amount is in range of [0, 100] and 1 <= trackIndex <= GetTrackCount("audio"). Returns True if successful.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
         ...
 
@@ -2416,7 +2670,7 @@ class TimelineItem:
     def SetProperty(self, propertyKey: str, propertyValue: Any) -> bool:
         """
         Sets the value of property "propertyKey" to value "propertyValue".
-        Refer to "Looking up Timeline item properties" for more information.
+        Refer to section "Looking up Timeline item properties" for more information
         """
         ...
 
@@ -2563,20 +2817,25 @@ class TimelineItem:
         ...
 
     def GetStereoConvergenceValues(self) -> dict[Any, Any]:
-        """ Returns a dict (offset -> value) of keyframe offsets and respective convergence values. """
+        """
+        Returns a dict (offset -> value) of keyframe offsets and respective convergence values.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def GetStereoLeftFloatingWindowParams(self) -> dict[Any, FloatingWindowParams]:
         """ 
         For the LEFT eye -> returns a dict (offset -> dict) of keyframe offsets and respective floating window params. 
-        Value at particular offset includes the left, right, top and bottom floating window values. 
+        Value at particular offset includes the left, right, top and bottom floating window values.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
         ...
 
     def GetStereoRightFloatingWindowParams(self) -> dict[Any, FloatingWindowParams]:
         """ 
         For the RIGHT eye -> returns a dict (offset -> dict) of keyframe offsets and respective floating window params. 
-        Value at particular offset includes the left, right, top and bottom floating window values. 
+        Value at particular offset includes the left, right, top and bottom floating window values.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
         ...
 
@@ -2684,11 +2943,17 @@ class TimelineItem:
         ...
 
     def CreateMagicMask(self, mode: MagicMaskMode) -> bool:
-        """ Returns True if magic mask was created successfully, False otherwise. mode can "F" (forward), "B" (backward), or "BI" (bidirection) """
+        """
+        Returns True if magic mask was created successfully, False otherwise. mode can "F" (forward), "B" (backward), or "BI" (bidirection)
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def RegenerateMagicMask(self) -> bool:
-        """ Returns True if magic mask was regenerated successfully, False otherwise. """
+        """
+        Returns True if magic mask was regenerated successfully, False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def Stabilize(self) -> bool:
@@ -2696,7 +2961,10 @@ class TimelineItem:
         ...
 
     def SmartReframe(self) -> bool:
-        """ Performs Smart Reframe. Returns True if successful, False otherwise. """
+        """
+        Performs Smart Reframe. Returns True if successful, False otherwise.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
+        """
         ...
 
     def GetNodeGraph(self, layerIdx: Optional[int]) -> Graph:
@@ -2771,6 +3039,7 @@ class TimelineItem:
         """
         Sets Voice Isolation state of the timelineItem to the given VoiceIsolationState of {isEnabled (bool), amount (int)}.
         Amount is in range of [0, 100]. Returns True if successful.
+        Refer to section "Studio and AI Scripting APIs" for prerequisites.
         """
         ...
 
@@ -2869,7 +3138,7 @@ class Graph:
     def SetNodeCacheMode(self, nodeIndex: int, cache_value: CacheValue) -> bool:
         """
         Sets the cache mode type on the node mapping the node index provided.
-        Refer to "Cache Mode" section below to find the possible values of cache_value.
+        Refer to section "Cache Mode" below to find the possible values of cache_value.
         """
         ...
 

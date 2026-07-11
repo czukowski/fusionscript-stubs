@@ -10,7 +10,7 @@ setup(
     long_description_content_type='text/markdown',
     author="Korney Czukowski",
     author_email="carbofos@seznam.cz",
-    version="20.2.2",
+    version="21.0.0",
     package_data={"fusionscript-stubs": ['fusionscript.pyi', '__init__.pyi']},
     packages=["fusionscript-stubs"],
     license='MIT',
