@@ -4,6 +4,11 @@ DaVinci Resolve Python API stubs
 Using these stubs you can have type hints and autocompletion in your Python IDE
 when using DaVinci Resolve Python API. No more stumbling in the dark, yay!
 
+_As of DaVinci Resolve 22, the official stubs are now shipped with the software, 
+look for DaVinciResolveScript.pyi, it makes this package no longer necessary!_
+
+If you're using older Resolve versions, it may still be useful.
+
 Installation
 ------------
 
